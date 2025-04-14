@@ -21,17 +21,10 @@
                     <span>Tables</span>
                 </a>
             </li>
-            <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'rtl.php' ? 'active' : ''; ?>">
-                <a href="rtl.php">
-                    <i class="fas fa-align-right"></i>
-                    <span>RTL</span>
-                </a>
-            </li>
-        </ul>
         
         <!-- Separador -->
         <div class="sidebar-divider">
-            <span>ACCOUNTPAGES</span>
+            <span>ACCOUNT PAGES</span>
         </div>
         
         <!-- Menú de cuenta -->

@@ -3,9 +3,9 @@
 session_start();
 
 // Incluir archivos necesarios
-require_once 'includes/conexion_api.php';
-require_once 'includes/procesador_datos.php';
 require_once 'config/config.php';
+require_once 'includes/conexion_api.php';
+require_once 'includes/get_metrics.php';
 
 // Verificar si el usuario está logueado
 if (!isset($_SESSION['token']) || empty($_SESSION['token'])) {
@@ -196,21 +196,25 @@ include_once 'includes/header.php';
     </div>
 </div>
 
-<!-- Script para inicializar gráficos con datos dinámicos -->
+<!-- Al final de index.php, reemplaza el script existente con este: -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Index.php: DOM Content Loaded');
+    
     // Datos para el gráfico de conversaciones por hora
     var hourlyData = {
         labels: <?php echo json_encode($datos_grafico['labels'] ?? []); ?>,
         values: <?php echo json_encode($datos_grafico['values'] ?? []); ?>
     };
     
-    // Inicializar gráficos
-    initCharts();
+    // No inicializamos gráficos aquí, ya que se inicializan en charts.js
     
     // Actualizar gráfico de conversaciones por hora con datos dinámicos
     if (document.getElementById('hourlyChats') && hourlyData.labels.length > 0) {
-        updateHourlyChart(hourlyData.labels, hourlyData.values);
+        // Esperamos 500ms para asegurar que el gráfico ya está inicializado
+        setTimeout(function() {
+            updateHourlyChart(hourlyData.labels, hourlyData.values);
+        }, 500);
     }
 });
 </script>

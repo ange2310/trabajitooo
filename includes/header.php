@@ -22,11 +22,3 @@
     <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
-    <!-- Mobile navigation toggle - solo visible en móviles -->
-    <?php if (isset($_SESSION['token']) && !empty($_SESSION['token'])): ?>
-        <div class="mobile-nav">
-            <button id="mobile-toggle" class="mobile-toggle">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
-    <?php endif; ?>

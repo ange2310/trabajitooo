@@ -1,6 +1,8 @@
-
 <?php
-session_start();
+// No iniciar sesión aquí si ya se inició en otro lugar
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Configuración de la API
 $config = [
