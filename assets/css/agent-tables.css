@@ -1,0 +1,325 @@
+/* Estilos mejorados para tablas de agentes en el dashboard */
+
+/* Contenedor de la tabla */
+.table-card {
+    background: #262a38;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    margin-bottom: 25px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.table-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.table-card h2 {
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 600;
+    padding: 20px 25px;
+    margin: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(90deg, rgba(61, 78, 129, 0.3) 0%, rgba(30, 41, 59, 0.3) 100%);
+}
+
+/* Contenedor con scroll horizontal */
+.table-responsive {
+    padding: 15px;
+    overflow-x: auto;
+}
+
+/* Estilos de la tabla */
+.data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: #e2e8f0;
+    font-size: 14px;
+}
+
+.data-table thead th {
+    background-color: rgba(30, 41, 59, 0.4);
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 16px 20px;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.data-table tbody tr {
+    transition: background-color 0.2s, transform 0.2s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.data-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    transform: translateX(5px);
+}
+
+.data-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Estilos para las celdas de valores numéricos */
+.data-table td:nth-child(2),
+.data-table td:nth-child(3),
+.data-table td:nth-child(4),
+.data-table td:nth-child(5),
+.data-table td:nth-child(6) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Destacar el nombre del agente */
+.data-table td:first-child {
+    font-weight: 500;
+    color: #ffffff;
+    position: relative;
+    padding-left: 25px;
+}
+
+.data-table td:first-child::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: #3b82f6;
+    border-radius: 50%;
+}
+
+/* Estilos para las tasas de porcentaje */
+.data-table td:nth-child(4) {
+    color: #10b981;
+    font-weight: 500;
+}
+
+/* Mejora de estilo para los tiempos */
+.data-table td:nth-child(5),
+.data-table td:nth-child(6) {
+    color: #f59e0b;
+}
+
+/* Estilos para el sistema de valoración con estrellas */
+.rating {
+    display: flex;
+    align-items: center;
+    color: #f59e0b;
+}
+
+.rating i {
+    margin-right: 2px;
+}
+
+.rating .fa-star,
+.rating .fa-star-half-alt {
+    color: #f59e0b;
+    text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+}
+
+.rating .far.fa-star {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+.rating span {
+    color: #94a3b8;
+    margin-left: 6px;
+    font-size: 12px;
+}
+
+/* Estilos para el estado vacío */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #94a3b8;
+}
+
+.empty-state i {
+    font-size: 36px;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    font-size: 15px;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+/* Estilos para el formulario de filtro */
+.filter-card {
+    background: #262a38;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    margin-bottom: 25px;
+    padding: 20px;
+}
+
+.filter-form {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 15px;
+}
+
+.form-group {
+    flex: 1;
+    min-width: 200px;
+    margin-bottom: 10px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #94a3b8;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px 15px;
+    background-color: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.form-group button,
+.form-group a {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+    display: inline-block;
+    margin-top: 24px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+    border: none;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #94a3b8;
+    margin-left: 10px;
+    text-decoration: none;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+}
+
+/* Responsive para tablas */
+@media (max-width: 768px) {
+    .data-table thead {
+        display: none;
+    }
+    
+    .data-table tbody tr {
+        display: block;
+        margin-bottom: 15px;
+        background-color: rgba(30, 41, 59, 0.3);
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .data-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: right;
+        padding: 12px 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .data-table td:before {
+        content: attr(data-label);
+        font-weight: 500;
+        color: #94a3b8;
+        text-align: left;
+    }
+    
+    .data-table td:first-child {
+        padding-left: 15px;
+    }
+    
+    .data-table td:first-child::before {
+        display: none;
+    }
+    
+    .rating {
+        justify-content: flex-end;
+    }
+}
+
+/* Animación de carga para las tablas */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.table-loading .data-table td {
+    position: relative;
+    overflow: hidden;
+}
+
+.table-loading .data-table td:after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0) 100%);
+    animation: shimmer 2s infinite;
+}

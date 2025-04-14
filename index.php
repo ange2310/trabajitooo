@@ -221,5 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<script src="assets/js/dashboard.js"></script>
+
 <!-- Incluir el footer -->
 <?php include_once 'includes/footer.php'; ?>
