@@ -1,62 +1,43 @@
 <?php
 require_once 'config/config.php';
 require_once 'includes/conexion_api.php';
-// includes/get_metrics.php
-// Funciones para obtener y procesar métricas
 
-/**
- * Obtiene las métricas para el dashboard
- * 
- * @param string $fecha Fecha para la cual obtener las métricas
- * @return array Datos procesados para el dashboard
- */
-function obtener_metricas($fecha = null) {
-    // Para fines de desarrollo y evitar el timeout, generamos datos de muestra
-    // En producción, se conectaría con la API real
-    
-    // Datos de muestra para el dashboard
-    return [
-        'atencion' => 85.7,
-        'oportunidad' => 92.3,
-        'abandono' => 7.8,
-        'tiempo_espera' => 2.5,
-        'tiempo_respuesta' => 1.2,
-        'duracion_conversacion' => 8.7,
-        'conversaciones_recibidas' => 345,
-        'conversaciones_atendidas' => 296,
-        'objetivos_cantidad' => '42/50',
-        'objetivos_porcentaje' => 84,
-        'abandonadas_cantidad' => '27/345',
-        'total_chats' => 345
-    ];
-}
+// Agregar router para manejar acciones desde el frontend
+if (isset($_GET['action'])) {
+    header('Content-Type: application/json');
 
-/**
- * Procesa las métricas aplicando reglas de negocio
- * 
- * @param array $metricas Métricas crudas
- * @return array Métricas procesadas
- */
-function procesar_metricas($metricas) {
-    // Por simplicidad, devolvemos las mismas métricas sin cambios
-    return $metricas;
-}
+    switch ($_GET['action']) {
+        case 'dashboard_metrics':
+            $fecha = isset($_GET['fecha']) ? $_GET['fecha'] : date('Y-m-d');
+            try {
+                $metricas_datos = obtener_metricas_dashboard($fecha);
 
-/**
- * Obtiene la configuración del dashboard
- * 
- * @return array Configuración del dashboard
- */
-function obtener_config_dashboard() {
-    // Simulamos una configuración
-    return [
-        'refresh_rate' => 60, // segundos
-        'goal_targets' => [
-            'atencion' => 90,
-            'oportunidad' => 85,
-            'abandono' => 10
-        ]
-    ];
+                // Formatear datos como se espera en charts.js
+                $response = [
+                    'total_conversations_received' => $metricas_datos['total_conversations'] ?? 0,
+                    'total_conversations_attended' => $metricas_datos['attended_conversations'] ?? 0,
+                    'total_abandoned' => $metricas_datos['abandoned_conversations'] ?? 0,
+                    'average_first_response_minutes' => $metricas_datos['average_response_time'] ?? 0,
+                    'average_duration_minutes' => $metricas_datos['average_conversation_duration'] ?? 0,
+                    'average_wait_minutes' => $metricas_datos['average_wait_time'] ?? 0,
+                    'goal_achieved_count' => $metricas_datos['goals_achieved'] ?? 0,
+                    'attendance_rate' => $metricas_datos['attention_rate'] ?? 0,
+                    'opportunity_rate' => $metricas_datos['opportunity_rate'] ?? 0,
+                    'abandonment_rate' => $metricas_datos['abandonment_rate'] ?? 0,
+                ];
+
+                echo json_encode($response);
+            } catch (Exception $e) {
+                echo json_encode(['error' => $e->getMessage()]);
+            }
+            break;
+
+        default:
+            echo json_encode(['error' => 'Acción no válida']);
+            break;
+    }
+
+    exit; // Detener ejecución si es una acción
 }
 
 /**
@@ -68,7 +49,7 @@ function obtener_estadisticas_chat($start_date = null, $end_date = null, $group_
     }
 
     if (!isset($_SESSION['token'])) {
-        ('location: login.php'); // Redirigir a la página de inicio de sesión si no hay token
+        header('location: login.php'); // Redirigir a la página de inicio de sesión si no hay token
         exit;
     }
 
@@ -105,6 +86,7 @@ function obtener_estadisticas_chat($start_date = null, $end_date = null, $group_
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
     $response = curl_exec($ch);
+
     if ($response === false) {
         // Manejar el error si curl falló
         echo 'Error en la solicitud: ' . curl_error($ch);
@@ -143,9 +125,6 @@ function obtener_estadisticas_chat($start_date = null, $end_date = null, $group_
 
 /**
  * Procesa datos para gráficos
- * 
- * @param array $datos Datos crudos 
- * @return array Datos procesados para gráficos
  */
 function procesar_datos_grafico_horas($datos) { 
     $labels = [];
@@ -176,49 +155,316 @@ function procesar_datos_grafico_horas($datos) {
     ];
 }
 
+function obtener_rendimiento_agente($start_date = null, $end_date = null, $agent_id = null, $agent_email = null) {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start(); // Solo iniciar la sesión si no está activa
+    }
 
-/**
- * Obtiene el rendimiento por agente
- * 
- * @param string $inicio Fecha inicio
- * @param string $fin Fecha fin
- * @param string $agent_email Email del agente (opcional)
- * @return array Datos de rendimiento
- */
-function obtener_rendimiento_agente($inicio, $fin, $agent_email = null) {
-    // Datos de muestra
-    $agentes = [
-        [
-            'agent_name' => 'Ana García',
-            'chats_received' => 345,
-            'chats_attended' => 310,
-            'avg_response_time' => 1.8,
-            'avg_duration' => 10.5,
-            'rating' => 4.7
-        ],
-        [
-            'agent_name' => 'Carlos Martínez',
-            'chats_received' => 298,
-            'chats_attended' => 265,
-            'avg_response_time' => 2.1,
-            'avg_duration' => 8.9,
-            'rating' => 4.5
-        ],
-        [
-            'agent_name' => 'Laura Rodríguez',
-            'chats_received' => 312,
-            'chats_attended' => 290,
-            'avg_response_time' => 1.5,
-            'avg_duration' => 9.8,
-            'rating' => 4.8
-        ]
+    if (!isset($_SESSION['token'])) {
+        header('location: login.php'); // Redirigir a la página de inicio de sesión si no hay token
+        exit;
+    }
+
+    // Valores por defecto si no se proporcionan fechas
+    if ($start_date === null) {
+        $start_date = date('Y-m-d', strtotime('-7 days')); // 7 días atrás
+    }
+    if ($end_date === null) {
+        $end_date = date('Y-m-d'); //Fecha actual
+    }
+
+    // URL DE LA API CON DATOS OPCIONALES
+    $url = "https://chatdev.tpsalud.com:6999/agent_performance?start_date=$start_date&end_date=$end_date";
+
+    // Si se proporciona un ID de agente, agregarlo a la URL
+    if ($agent_id !== null) {
+        $url .= "&agent_id=$agent_id";
+    } elseif ($agent_email !== null) {
+        $url .= "&agent_email=$agent_email";
+    }
+
+    // Obtener el token de sesión
+    $token = $_SESSION['token'];
+
+    // Verificar si el token está vacío o no está disponible
+    if (empty($token)) {
+        echo 'Error: El token de autenticación no está disponible.';
+        return null;
+    }
+
+    // Config de headers, incluye el token de sesión
+    $headers = [
+        'Authorization: Bearer ' . $token,
+        'Content-Type: application/json'
     ];
+
+    // Iniciar cURL
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+    $response = curl_exec($ch);
+
+    if ($response === false) {
+        // Manejar el error si curl falló
+        echo 'Error en la solicitud: ' . curl_error($ch);
+        curl_close($ch);
+        return null;
+    }
+
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     
-    // Si se especificó un agente, filtramos los resultados
-    if ($agent_email !== null && $agent_email !== '') {
-        return [$agentes[0]];
+    if ($httpCode === 401) {
+        echo 'Error de autenticación: ' . $response;
+        return null;
+    }
+
+    // Verificar si la solicitud fue exitosa
+    if ($httpCode === 200) {
+        // Intentar decodificar la respuesta JSON
+        $data = json_decode($response, true);
+
+        // Verificar si hubo un error al decodificar el JSON
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            echo 'Error al decodificar el JSON: ' . json_last_error_msg();
+            return null;
+        }
+
+        return $data;
+    } else {
+        // Manejar el error si la respuesta no es 200
+        echo 'Error HTTP: ' . $httpCode . ' Respuesta: ' . $response;
+        return null;
+    }
+
+
+}
+
+
+
+function obtener_configuracion_dashboard() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['token'])) {
+        header('location: login.php');
+        exit;
+    }
+
+    // URL del endpoint
+    $url = "https://chatdev.tpsalud.com:6999/dashboard_config";
+
+    // Obtener el token de sesión
+    $token = $_SESSION['token'];
+
+    // Verificar si el token está disponible
+    if (empty($token)) {
+        return [
+            'error' => true,
+            'message' => 'El token de autenticación no está disponible'
+        ];
+    }
+
+    // Configurar headers con el token
+    $headers = [
+        'Authorization: Bearer ' . $token,
+        'Content-Type: application/json'
+    ];
+
+    // Iniciar cURL
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    
+    if (curl_errno($ch)) {
+        error_log('Error de cURL: ' . curl_error($ch));
+        curl_close($ch);
+        return [
+            'error' => true,
+            'message' => 'Error de conexión con el servidor'
+        ];
     }
     
-    return $agentes;
+    curl_close($ch);
+
+    // Verificar respuesta HTTP
+    if ($httpCode !== 200) {
+        error_log('Error HTTP: ' . $httpCode);
+        return [
+            'error' => true,
+            'message' => 'Error del servidor: ' . $httpCode
+        ];
+    }
+
+    // Decodificar JSON
+    $data = json_decode($response, true);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log('Error al decodificar JSON: ' . json_last_error_msg());
+        return [
+            'error' => true,
+            'message' => 'Error al procesar la respuesta del servidor'
+        ];
+    }
+
+    return $data;
 }
+
+function actualizar_configuracion_dashboard($config = []) {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['token'])) {
+        header('location: login.php');
+        exit;
+    }
+
+    $url = "https://chatdev.tpsalud.com:6999/dashboard_config";
+    $token = $_SESSION['token'];
+
+    if (empty($token)) {
+        echo "❌ Token vacío. No se puede continuar.";
+        return ['error' => true, 'message' => 'Token vacío'];
+    }
+
+    $headers = [
+        'Authorization: Bearer ' . $token,
+        'Content-Type: application/json'
+    ];
+
+    $payload = json_encode($config);
+
+    // Mostrar lo que se enviará
+    echo "📤 Enviando configuración:\n" . print_r($config, true);
+    echo "🔐 Token:\n$token\n";
+    echo "📦 JSON Payload:\n$payload\n";
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+    // Mostrar la respuesta y código HTTP
+    echo "📨 Respuesta del servidor:\n$response\n";
+    echo "📡 Código HTTP:\n$httpCode\n";
+
+    if (curl_errno($ch)) {
+        echo "❌ Error de conexión: " . curl_error($ch);
+        curl_close($ch);
+        return ['error' => true, 'message' => 'Error de conexión'];
+    }
+
+    curl_close($ch);
+
+    if ($httpCode !== 200) {
+        echo "⚠️ Error del servidor: Código $httpCode";
+        return ['error' => true, 'message' => 'Error del servidor: ' . $httpCode];
+    }
+
+    $data = json_decode($response, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        echo "❌ Error al decodificar JSON: " . json_last_error_msg();
+        return ['error' => true, 'message' => 'Respuesta inválida'];
+    }
+
+    echo "<h4>✅ Datos decodificados:</h4><pre>" . print_r($data, true) . "</pre>";
+
+    return $data;
+}
+
+function obtener_metricas_dashboard($date = null) {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start(); // Solo iniciar la sesión si no está activa
+    }
+
+    if (!isset($_SESSION['token'])) {
+        header('location: login.php'); // Redirigir a la página de inicio de sesión si no hay token
+        exit;
+    }
+
+    if ($date === null) {
+        $date = date('Y-m-d');
+    }
+
+    $url = "https://chatdev.tpsalud.com:6999/dashboard_metrics?date=$date";
+    $token = $_SESSION['token'];
+
+    if (empty($token)) {
+        $msg = 'Error: El token de autenticación no está disponible.';
+        echo $msg;
+        error_log($msg);
+        return null;
+    }
+
+    $headers = [
+        'Authorization: Bearer ' . $token,
+        'Content-Type: application/json'
+    ];
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+    $response = curl_exec($ch);
+
+    if ($response === false) {
+        $msg = 'Error en la solicitud: ' . curl_error($ch);
+        echo $msg;
+        error_log($msg);
+        curl_close($ch);
+        return null;
+    }
+
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 401) {
+        $msg = 'Error de autenticación: ' . $response;
+        echo $msg;
+        error_log($msg);
+        return null;
+    }
+
+    if ($httpCode === 200) {
+        $data = json_decode($response, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $msg = 'Error al decodificar el JSON: ' . json_last_error_msg();
+            echo $msg;
+            error_log($msg);
+            return null;
+        }
+
+        // Mostrar y registrar los datos recibidos
+        echo '<pre>' . print_r($data, true) . '</pre>';
+        error_log('Datos recibidos: ' . print_r($data, true));
+
+        return $data;
+    } else {
+        $msg = 'Error HTTP: ' . $httpCode . ' Respuesta: ' . $response;
+        echo $msg;
+        error_log($msg);
+        return null;
+    }
+}
+
+function procesar_metricas($metricas){
+    return $metricas;
+}
+
 ?>

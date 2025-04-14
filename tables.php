@@ -20,6 +20,21 @@ $agent_email = isset($_GET['agent']) ? $_GET['agent'] : null;
 
 // Obtener datos de rendimiento de agentes
 $rendimiento_agentes = obtener_rendimiento_agente($inicio, $fin, $agent_email);
+/*
+echo '<pre>';
+print_r($rendimiento_agentes);
+echo '</pre>';
+*/
+// Debug: Ver la estructura de datos real
+if (!empty($rendimiento_agentes) && isset($rendimiento_agentes[0])) {
+    error_log('Estructura de datos del primer agente: ' . print_r($rendimiento_agentes[0], true));
+}
+
+// Asegurarse de que siempre sea un array
+if (!is_array($rendimiento_agentes)) {
+    $rendimiento_agentes = [];
+    error_log('obtener_rendimiento_agente() devolvió un valor no array: ' . gettype($rendimiento_agentes));
+}
 
 // Incluir el header
 include_once 'includes/header.php';

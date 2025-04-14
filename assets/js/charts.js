@@ -17,6 +17,19 @@ document.addEventListener('DOMContentLoaded', function() {
         chartsInitialized = true;
     }
 });
+function fetchDashboardMetrics(fecha) {
+    return fetch(`includes/get_metrics.php?action=dashboard_metrics&fecha=${fecha}`)
+      .then(response => response.json())
+      .then(data => {
+        console.log('Dashboard Metrics:', data); // Útil para debug
+        return data;
+      })
+      .catch(error => {
+        console.error('Error al obtener métricas:', error);
+        return null;
+      });
+  }
+  
 
 // Configurar el toggle del sidebar para evitar recreación de gráficos
 function setupSidebarToggle() {
@@ -136,7 +149,7 @@ function initCharts() {
     initGaugeChart('gaugeOportunidad', '#ffcc00', '#ff9900');
     initGaugeChart('gaugeAbandono', '#ff3366', '#ff0000');
     initConversacionesGauge()
-    
+
     // Inicializar gráfico de barras para métricas de tiempo
     initTimeMetricsChart();
     
