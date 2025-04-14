@@ -196,7 +196,6 @@ include_once 'includes/header.php';
     </div>
 </div>
 
-<!-- Al final de index.php, reemplaza el script existente con este: -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Index.php: DOM Content Loaded');
@@ -207,14 +206,17 @@ document.addEventListener('DOMContentLoaded', function() {
         values: <?php echo json_encode($datos_grafico['values'] ?? []); ?>
     };
     
-    // No inicializamos gráficos aquí, ya que se inicializan en charts.js
+    // No intentamos inicializar los gráficos aquí, ya que se hacen en charts.js
     
     // Actualizar gráfico de conversaciones por hora con datos dinámicos
+    // Solo si el gráfico ya está inicializado
     if (document.getElementById('hourlyChats') && hourlyData.labels.length > 0) {
-        // Esperamos 500ms para asegurar que el gráfico ya está inicializado
+        // Esperamos 800ms para asegurar que el gráfico ya está inicializado
         setTimeout(function() {
-            updateHourlyChart(hourlyData.labels, hourlyData.values);
-        }, 500);
+            if (typeof updateHourlyChart === 'function') {
+                updateHourlyChart(hourlyData.labels, hourlyData.values);
+            }
+        }, 800);
     }
 });
 </script>

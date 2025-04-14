@@ -20,5 +20,8 @@
     
     <!-- CSS personalizado -->
     <link rel="stylesheet" href="assets/css/styles.css">
+
+    <!-- CSS específico para widget de conversaciones -->
+    <link rel="stylesheet" href="assets/css/conversaciones.css">
 </head>
 <body>

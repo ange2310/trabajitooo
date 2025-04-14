@@ -1,15 +1,131 @@
-// assets/js/charts.js
-// javascript para los gráficos de la página principal
+// Reemplaza completamente el archivo assets/js/charts.js con este código
 
 // Variable global para guardar referencias a los gráficos
 var chartInstances = {};
+var chartsInitialized = false;
 
 // Inicializar gráficos cuando la página esté lista
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Content Loaded - Initializing charts');
-    // Inicializar gráficos
-    initCharts();
+    
+    // Configurar evento para redimensionar gráficos sin recrearlos
+    setupSidebarToggle();
+    
+    // Solo inicializar gráficos una vez
+    if (!chartsInitialized) {
+        initCharts();
+        chartsInitialized = true;
+    }
 });
+
+// Configurar el toggle del sidebar para evitar recreación de gráficos
+function setupSidebarToggle() {
+    const toggleSidebar = document.getElementById('toggle-sidebar');
+    const mobileToggle = document.getElementById('mobile-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    const contentWrapper = document.querySelector('.content-wrapper');
+    
+    function toggleSidebarState() {
+        sidebar.classList.toggle('collapsed');
+        
+        // Guardar estado en cookie
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        document.cookie = `sidebar_collapsed=${isCollapsed}; path=/; max-age=31536000`;
+        
+        // Ajustar margin del content wrapper
+        if (window.innerWidth > 1200) {
+            if (isCollapsed) {
+                contentWrapper.style.marginLeft = '80px';
+                contentWrapper.style.width = 'calc(100% - 80px)';
+            } else {
+                contentWrapper.style.marginLeft = '250px';
+                contentWrapper.style.width = 'calc(100% - 250px)';
+            }
+        }
+        
+        // IMPORTANTE: En lugar de recrear los gráficos, solo los redimensionamos
+        setTimeout(function() {
+            resizeAllCharts();
+        }, 300);
+    }
+    
+    // Solo configurar el evento una vez
+    if (toggleSidebar && !toggleSidebar._sidebarEventAttached) {
+        toggleSidebar.addEventListener('click', toggleSidebarState);
+        toggleSidebar._sidebarEventAttached = true;
+    }
+    
+    // Toggle del sidebar en móviles
+    if (mobileToggle && !mobileToggle._sidebarEventAttached) {
+        mobileToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+            setTimeout(function() {
+                resizeAllCharts();
+            }, 300);
+        });
+        mobileToggle._sidebarEventAttached = true;
+    }
+}
+
+// Función para redimensionar todos los gráficos existentes
+function resizeAllCharts() {
+    for (let id in chartInstances) {
+        if (chartInstances[id] && typeof chartInstances[id].resize === 'function') {
+            chartInstances[id].resize();
+        }
+    }
+}
+function initConversacionesGauge() {
+    console.log('Inicializando gauge de conversaciones personalizado');
+    const canvas = document.getElementById('gaugeConversaciones');
+    if (!canvas) return;
+    
+    // Destruir gráfico existente si hay uno
+    if (chartInstances['gaugeConversaciones']) {
+        chartInstances['gaugeConversaciones'].destroy();
+        chartInstances['gaugeConversaciones'] = null;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Valor del gauge
+    const valueElement = canvas.parentElement.querySelector('.gauge-value');
+    const percentage = valueElement ? parseFloat(valueElement.textContent) : 0;
+    
+    // Gradiente personalizado
+    const gradientColors = ctx.createLinearGradient(0, 0, 0, 200);
+    gradientColors.addColorStop(0, '#5b45e0');  // Un poco más claro
+    gradientColors.addColorStop(1, '#7c5bf2');  // Un poco más púrpura
+    
+    // Crear el gráfico con opciones personalizadas
+    chartInstances['gaugeConversaciones'] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [percentage, 100 - percentage],
+                backgroundColor: [
+                    gradientColors,
+                    'rgba(30, 30, 60, 0.2)' // Fondo más transparente
+                ],
+                borderWidth: 0,
+                cutout: '80%'  // Más delgado que el predeterminado
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: 1500
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            }
+        }
+    });
+}
 
 // Función principal para inicializar todos los gráficos
 function initCharts() {
@@ -19,7 +135,7 @@ function initCharts() {
     initGaugeChart('gaugeAtencion', '#9933ff', '#3366ff');
     initGaugeChart('gaugeOportunidad', '#ffcc00', '#ff9900');
     initGaugeChart('gaugeAbandono', '#ff3366', '#ff0000');
-    initGaugeChart('gaugeConversaciones', '#4338ca', '#6d28d9');
+    initConversacionesGauge()
     
     // Inicializar gráfico de barras para métricas de tiempo
     initTimeMetricsChart();
@@ -37,7 +153,7 @@ function initGaugeChart(canvasId, color1, color2) {
         return;
     }
     
-    // Destruir el gráfico existente si existe
+    // IMPORTANTE: Verificar si ya existe un gráfico y destruirlo correctamente
     if (chartInstances[canvasId]) {
         console.log('Destroying existing chart: ' + canvasId);
         chartInstances[canvasId].destroy();
@@ -45,6 +161,10 @@ function initGaugeChart(canvasId, color1, color2) {
     }
     
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.warn('Could not get context for: ' + canvasId);
+        return;
+    }
     
     // Obtener el valor del gauge del elemento hermano con clase gauge-value
     const valueElement = canvas.parentElement.querySelector('.gauge-value');
@@ -55,7 +175,7 @@ function initGaugeChart(canvasId, color1, color2) {
     gradientColors.addColorStop(0, color1);
     gradientColors.addColorStop(1, color2);
     
-    // Configurar y crear el gráfico
+    // IMPORTANTE: Configurar el gráfico con responsive y maintainAspectRatio bien configurados
     chartInstances[canvasId] = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -99,7 +219,7 @@ function initTimeMetricsChart() {
         return;
     }
     
-    // Destruir el gráfico existente si existe
+    // IMPORTANTE: Destruir el gráfico existente si existe
     if (chartInstances['timeMetrics']) {
         console.log('Destroying existing time metrics chart');
         chartInstances['timeMetrics'].destroy();
@@ -107,6 +227,10 @@ function initTimeMetricsChart() {
     }
     
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.warn('Could not get context for: timeMetrics');
+        return;
+    }
     
     // Obtener los valores de los elementos hermanos
     const timeElements = canvas.parentElement.parentElement.querySelectorAll('.time-value');
@@ -209,7 +333,7 @@ function initHourlyChart() {
         return;
     }
     
-    // Destruir el gráfico existente si existe
+    // IMPORTANTE: Destruir el gráfico existente si existe
     if (chartInstances['hourlyChats']) {
         console.log('Destroying existing hourly chart');
         chartInstances['hourlyChats'].destroy();
@@ -217,6 +341,10 @@ function initHourlyChart() {
     }
     
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.warn('Could not get context for: hourlyChats');
+        return;
+    }
     
     // Datos de muestra (serán reemplazados por datos reales)
     const data = {
@@ -314,3 +442,12 @@ function updateHourlyChart(labels, values) {
         chart.update();
     }
 }
+
+// Detectar cambios de tamaño de ventana para ajustar los gráficos
+window.addEventListener('resize', function() {
+    // Usar un temporizador para evitar actualizaciones demasiado frecuentes
+    if (this.resizeTimer) clearTimeout(this.resizeTimer);
+    this.resizeTimer = setTimeout(function() {
+        resizeAllCharts();
+    }, 300);
+});
