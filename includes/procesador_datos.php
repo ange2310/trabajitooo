@@ -1,5 +1,5 @@
 <?php
-require_once 'api_handler.php';
+require_once 'get_metrics.php';
 
 function getDashboardData() {
     // Obtener datos crudos de la API

@@ -1,25 +1,53 @@
-<footer>
-        <!-- Pie de página común -->
-    </footer>
+<!-- includes/footer.php - Pie de página de todas las páginas -->
     
-    <!-- Scripts comunes -->
-    <script src="assets/librerias/chart.min.js"></script>
+    <!-- JavaScript para el dashboard -->
     <script src="assets/js/charts.js"></script>
-<!-- Chart.js desde CDN (versión 4.4.8) con fallback -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-<script>
-    // Fallback si el CDN falla
-    window.addEventListener('error', function(e) {
-        if (e.target.src && e.target.src.indexOf('chart.js') !== -1) {
-            var script = document.createElement('script');
-            script.src = 'assets/librerias/chart.min.js';
-            document.body.appendChild(script);
-            console.log('Cargando Chart.js desde local debido a fallo en CDN');
-        }
-    }, true);
-</script>
-
-<!-- Tu script personalizado para los gráficos -->
-<script src="assets/js/charts.js"></script>
+    <script>
+        // Script para el toggle del sidebar
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle del sidebar
+            const toggleSidebar = document.getElementById('toggle-sidebar');
+            const mobileToggle = document.getElementById('mobile-toggle');
+            const sidebar = document.querySelector('.sidebar');
+            const contentWrapper = document.querySelector('.content-wrapper');
+            
+            // Función para alternar el estado del sidebar
+            function toggleSidebarState() {
+                sidebar.classList.toggle('collapsed');
+                
+                // Guardar estado en cookie
+                const isCollapsed = sidebar.classList.contains('collapsed');
+                document.cookie = `sidebar_collapsed=${isCollapsed}; path=/; max-age=31536000`;
+                
+                // Ajustar margin del content wrapper
+                if (window.innerWidth > 1200) {
+                    if (isCollapsed) {
+                        contentWrapper.style.marginLeft = '80px';
+                        contentWrapper.style.width = 'calc(100% - 80px)';
+                    } else {
+                        contentWrapper.style.marginLeft = '250px';
+                        contentWrapper.style.width = 'calc(100% - 250px)';
+                    }
+                }
+            }
+            
+            // Evento de click en el toggle del sidebar
+            if (toggleSidebar) {
+                toggleSidebar.addEventListener('click', toggleSidebarState);
+            }
+            
+            // Toggle del sidebar en móviles
+            if (mobileToggle) {
+                mobileToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('active');
+                });
+            }
+            
+            // Inicializar gráficos si estamos en el dashboard
+            if (document.getElementById('gaugeAtencion')) {
+                initCharts();
+            }
+        });
+    </script>
 </body>
 </html>
