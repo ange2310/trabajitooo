@@ -13,8 +13,8 @@ function login_api_dev($username, $password) {
     // Verificar credenciales
     if (array_key_exists($username, $valid_users) && $valid_users[$username] === $password) {
         // Simular respuesta exitosa de API
-        return [
-            'access_token' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJyb2xlIjoiYWRtaW4ifQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
+        $response = [
+            'access_token' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNzQ0NjU3NjU4fQ.DtgEZq-d_YU1qgpRonsP9oLz1BnDzKQc2oT-dDzsUdw',
             'token_type' => 'bearer',
             'user' => [
                 'id' => 1,
@@ -23,6 +23,17 @@ function login_api_dev($username, $password) {
                 'role' => 'admin'
             ]
         ];
+
+        // Iniciar la sesión si no está iniciada
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        // Guardar el token en la sesión
+        $_SESSION['token'] = $response['access_token'];
+
+        // Retornar la respuesta con éxito
+        return $response;
     }
     
     // Simular error

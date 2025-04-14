@@ -1,4 +1,6 @@
 <?php
+require_once 'config/config.php';
+require_once 'includes/conexion_api.php';
 // includes/get_metrics.php
 // Funciones para obtener y procesar métricas
 
@@ -59,63 +61,85 @@ function obtener_config_dashboard() {
 
 /**
  * Obtiene estadísticas de chat por periodo
- * 
- * @param string $inicio Fecha de inicio
- * @param string $fin Fecha fin
- * @param string $agrupacion Tipo de agrupación (hour, day, week, month)
- * @return array Datos de conversaciones
  */
-function obtener_estadisticas_chat($inicio, $fin, $agrupacion = 'day') {
-    // Si es por hora, retorna datos por hora
-    if ($agrupacion == 'hour') {
-        return [
-            ['hour' => '4:00 AM', 'count' => 2],
-            ['hour' => '5:00 AM', 'count' => 3],
-            ['hour' => '6:00 AM', 'count' => 5],
-            ['hour' => '7:00 AM', 'count' => 8],
-            ['hour' => '8:00 AM', 'count' => 10],
-            ['hour' => '9:00 AM', 'count' => 9],
-            ['hour' => '10:00 AM', 'count' => 7],
-            ['hour' => '11:00 AM', 'count' => 8],
-            ['hour' => '12:00 PM', 'count' => 10],
-            ['hour' => '1:00 PM', 'count' => 9],
-            ['hour' => '2:00 PM', 'count' => 7],
-            ['hour' => '3:00 PM', 'count' => 8],
-            ['hour' => '4:00 PM', 'count' => 9],
-            ['hour' => '5:00 PM', 'count' => 6],
-            ['hour' => '6:00 PM', 'count' => 5],
-            ['hour' => '7:00 PM', 'count' => 4],
-            ['hour' => '8:00 PM', 'count' => 3],
-            ['hour' => '9:00 PM', 'count' => 2],
-            ['hour' => '10:00 PM', 'count' => 1]
-        ];
+function obtener_estadisticas_chat($start_date = null, $end_date = null, $group_by = 'day') {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start(); // Solo iniciar la sesión si no está activa
     }
-    
-    // Para agrupación diaria
-    return [
-        [
-            'date' => '2025-04-01',
-            'total_conversations' => 120,
-            'attended_conversations' => 105,
-            'abandoned_conversations' => 15,
-            'avg_conversation_time' => 8.5
-        ],
-        [
-            'date' => '2025-04-02',
-            'total_conversations' => 135,
-            'attended_conversations' => 118,
-            'abandoned_conversations' => 17,
-            'avg_conversation_time' => 7.8
-        ],
-        [
-            'date' => '2025-04-03',
-            'total_conversations' => 142,
-            'attended_conversations' => 128,
-            'abandoned_conversations' => 14,
-            'avg_conversation_time' => 9.2
-        ]
+
+    if (!isset($_SESSION['token'])) {
+        ('location: login.php'); // Redirigir a la página de inicio de sesión si no hay token
+        exit;
+    }
+
+    // Valores por defecto si no se proporcionan fechas
+    if ($start_date === null) {
+        $start_date = date('Y-m-d', strtotime('-7 days')); // 7 días atrás
+    }
+    if ($end_date === null) {
+        $end_date = date('Y-m-d'); //Fecha actual
+    }
+
+    // URL DE LA API CON DATOS OPCIONALES
+    $url = "https://chatdev.tpsalud.com:6999/chat_statistics?start_date=$start_date&end_date=$end_date&group_by=$group_by";
+
+    // Obtener el token de sesión
+    $token = $_SESSION['token'];
+
+    // Verificar si el token está vacío o no está disponible
+    if (empty($token)) {
+        echo 'Error: El token de autenticación no está disponible.';
+        return null;
+    }
+
+    // Config de headers, incluye el token de sesión
+    $headers = [
+        'Authorization: Bearer ' . $token,
+        'Content-Type: application/json'
     ];
+
+    // Iniciar cURL
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+    $response = curl_exec($ch);
+    if ($response === false) {
+        // Manejar el error si curl falló
+        echo 'Error en la solicitud: ' . curl_error($ch);
+        curl_close($ch);
+        return null;
+    }
+
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    // Si el código HTTP es 401, muestra la respuesta completa
+    if ($httpCode === 401) {
+        echo 'Error de autenticación: ' . $response;
+        return null;
+    }
+
+    // Verificar si la solicitud fue exitosa
+    if ($httpCode === 200) {
+        // Intentar decodificar la respuesta JSON
+        $data = json_decode($response, true);
+
+        // Verificar si hubo un error al decodificar el JSON
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            echo 'Error al decodificar el JSON: ' . json_last_error_msg();
+            return null;
+        }
+
+        return $data;
+    } else {
+        // Manejar el error si la respuesta no es 200
+        echo 'Error HTTP: ' . $httpCode . ' Respuesta: ' . $response;
+        return null;
+    }
 }
+
 
 /**
  * Procesa datos para gráficos
@@ -123,13 +147,27 @@ function obtener_estadisticas_chat($inicio, $fin, $agrupacion = 'day') {
  * @param array $datos Datos crudos 
  * @return array Datos procesados para gráficos
  */
-function procesar_datos_grafico_horas($datos) {
+function procesar_datos_grafico_horas($datos) { 
     $labels = [];
     $values = [];
-    
-    foreach ($datos as $item) {
-        $labels[] = $item['hour'];
-        $values[] = $item['count'];
+
+    // Acceder al array de estadísticas
+    if (!isset($datos['statistics'])) {
+        echo "Error: No se encontraron estadísticas.";
+        return ['labels' => [], 'values' => []];
+    }
+
+    foreach ($datos['statistics'] as $item) {
+        if (!isset($item['period']) || !isset($item['total_chats'])) {
+            echo "Error: El item no tiene los índices \"period\" o \"total_chats\".";
+            continue;
+        }
+
+        // Extraer solo la hora del campo 'period'
+        $hora = date('H:i', strtotime($item['period']));
+
+        $labels[] = $hora;
+        $values[] = $item['total_chats'];
     }
     
     return [
@@ -137,6 +175,7 @@ function procesar_datos_grafico_horas($datos) {
         'values' => $values
     ];
 }
+
 
 /**
  * Obtiene el rendimiento por agente

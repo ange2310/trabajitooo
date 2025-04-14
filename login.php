@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Incluir el header específico para login (sin sidebar)
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
