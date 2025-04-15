@@ -1,6 +1,6 @@
 <?php
-require_once 'config/config.php';
-require_once 'includes/conexion_api.php';
+require_once(__DIR__ . '/../config/config.php');
+require_once(__DIR__ . '/conexion_api.php');
 
 // Agregar router para manejar acciones desde el frontend
 if (isset($_GET['action'])) {
@@ -27,6 +27,21 @@ if (isset($_GET['action'])) {
                 ];
 
                 echo json_encode($response);
+            } catch (Exception $e) {
+                echo json_encode(['error' => $e->getMessage()]);
+            }
+            break;
+
+        // AÑADIR ESTE NUEVO CASO PARA DATOS POR HORA
+        case 'hourly_stats':
+            $start_date = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-01');
+            $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-t');
+            
+            try {
+                $datos = obtener_estadisticas_chat($start_date, $end_date, 'hour');
+                $datos_procesados = procesar_datos_grafico_horas($datos);
+                
+                echo json_encode($datos_procesados);
             } catch (Exception $e) {
                 echo json_encode(['error' => $e->getMessage()]);
             }

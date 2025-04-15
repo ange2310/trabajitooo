@@ -1,7 +1,8 @@
-/* JavaScript para el Toggle del Sidebar */
-
-// Código JavaScript a implementar en un archivo dashboard.js
+// assets/js/dashboard.js
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard.js: DOM Content Loaded');
+    
+    /* ===== Manejo del Toggle del Sidebar ===== */
     // Elementos DOM
     const sidebar = document.querySelector('.sidebar');
     const contentWrapper = document.querySelector('.content-wrapper');
@@ -26,6 +27,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Guardar estado en cookie
         const isCollapsed = sidebar.classList.contains('collapsed');
         document.cookie = `sidebar_collapsed=${isCollapsed}; path=/; max-age=31536000`;
+        
+        // Redimensionar gráficos después de la transición
+        setTimeout(function() {
+            if (typeof resizeAllCharts === 'function') {
+                resizeAllCharts();
+            }
+        }, 300);
     }
     
     // Asignar eventos
@@ -37,6 +45,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (mobileToggle) {
         mobileToggle.addEventListener('click', function() {
             sidebar.classList.toggle('active');
+            
+            // Redimensionar gráficos después de la transición
+            setTimeout(function() {
+                if (typeof resizeAllCharts === 'function') {
+                    resizeAllCharts();
+                }
+            }, 300);
         });
     }
     
@@ -55,4 +70,124 @@ document.addEventListener('DOMContentLoaded', function() {
     cards.forEach((card, index) => {
         card.style.setProperty('--animation-order', index);
     });
+
+    /* ===== Manejo de los Gráficos y Actualización de Datos ===== */
+    
+    // Configurar listener para cambio de fecha manual (sin submit de formulario)
+    setupDateListener();
+    
+    // Inicializar datos si están disponibles desde PHP
+    if (typeof dashboard_data !== 'undefined') {
+        console.log('Datos del dashboard disponibles desde PHP');
+        
+        // Esperar a que los gráficos estén inicializados antes de actualizar
+        setTimeout(function() {
+            // Actualizar el gráfico de conversaciones por hora si la función está disponible
+            if (typeof updateHourlyChart === 'function' && 
+                dashboard_data.hourlyData && 
+                dashboard_data.hourlyData.labels && 
+                dashboard_data.hourlyData.values) {
+                updateHourlyChart(
+                    dashboard_data.hourlyData.labels, 
+                    dashboard_data.hourlyData.values
+                );
+            } else {
+                // Si no hay datos por hora en el paso inicial, intentar cargarlos
+                cargarDatosPorHora();
+            }
+        }, 1000); // Dar tiempo suficiente para que charts.js inicialice los gráficos
+    }
+});
+
+// Función para cargar datos por hora
+function cargarDatosPorHora() {
+    const fecha = document.getElementById('fecha')?.value || new Date().toISOString().split('T')[0];
+    
+    // Calcular inicio y fin de mes para la fecha seleccionada
+    const fechaObj = new Date(fecha);
+    const inicioMes = new Date(fechaObj.getFullYear(), fechaObj.getMonth(), 1);
+    const finMes = new Date(fechaObj.getFullYear(), fechaObj.getMonth() + 1, 0);
+    
+    const inicioFormatted = inicioMes.toISOString().split('T')[0];
+    const finFormatted = finMes.toISOString().split('T')[0];
+    
+    fetch(`includes/get_metrics.php?action=hourly_stats&start_date=${inicioFormatted}&end_date=${finFormatted}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Datos por hora cargados:', data);
+            if (data && data.labels && data.values) {
+                if (typeof updateHourlyChart === 'function') {
+                    updateHourlyChart(data.labels, data.values);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar datos por hora:', error);
+        });
+}
+
+// Función para configurar el listener del selector de fecha
+function setupDateListener() {
+    const fechaInput = document.getElementById('fecha');
+    
+    if (fechaInput) {
+        // Verificar si ya tiene el atributo onchange que hace submit
+        const tieneOnchange = fechaInput.hasAttribute('onchange');
+        
+        // Si tiene onchange que hace submit automático, modificar el comportamiento
+        if (tieneOnchange) {
+            // Guardar el formulario al que pertenece
+            const fechaForm = fechaInput.closest('form');
+            
+            // Remover el atributo onchange para evitar submit automático
+            fechaInput.removeAttribute('onchange');
+            
+            // Añadir un nuevo event listener
+            fechaInput.addEventListener('change', function() {
+                // Obtener la fecha seleccionada
+                const nuevaFecha = this.value;
+                console.log('Nueva fecha seleccionada:', nuevaFecha);
+                
+                // Intentar actualizar gráficos con AJAX si la función está disponible
+                if (typeof loadDashboardData === 'function') {
+                    loadDashboardData(nuevaFecha);
+                    
+                    // Actualizar la URL sin recargar la página
+                    const newUrl = window.location.pathname + '?fecha=' + nuevaFecha;
+                    window.history.pushState({ fecha: nuevaFecha }, '', newUrl);
+                } else {
+                    // Si la función no está disponible, hacer submit del formulario
+                    if (fechaForm) {
+                        fechaForm.submit();
+                    }
+                }
+            });
+        }
+    }
+}
+
+// Manejar eventos de navegación (botones atrás/adelante)
+window.addEventListener('popstate', function(event) {
+    if (event.state && event.state.fecha) {
+        const fechaInput = document.getElementById('fecha');
+        if (fechaInput) {
+            fechaInput.value = event.state.fecha;
+            
+            // Cargar datos para la fecha restaurada
+            if (typeof loadDashboardData === 'function') {
+                loadDashboardData(event.state.fecha);
+            } else {
+                // Si no está disponible la función, hacer submit del formulario
+                const fechaForm = fechaInput.closest('form');
+                if (fechaForm) {
+                    fechaForm.submit();
+                }
+            }
+        }
+    }
 });

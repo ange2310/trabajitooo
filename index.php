@@ -86,6 +86,8 @@ include_once 'includes/header.php';
         <?php else: ?>
             <!-- Dashboard content -->
             <div class="dashboard-container">
+            <?php $porcentajeAtencion = number_format($metricas['atencion'], 2);?>
+
                 <!-- Fila superior -->
                 <div class="dashboard-row">
                     <!-- Tasa de Atención -->
@@ -93,7 +95,7 @@ include_once 'includes/header.php';
                         <h2>Tasa de Atención</h2>
                         <div class="gauge-container">
                             <canvas id="gaugeAtencion"></canvas>
-                            <div class="gauge-value"><?php echo number_format($metricas['atencion'], 2); ?>%</div>
+                            <div class="gauge-value"><?php echo $porcentajeAtencion; ?>%</div>
                         </div>
                         <p class="gauge-label">Basado en <?php echo $metricas['total_chats']; ?> chats</p>
                     </div>
@@ -115,19 +117,20 @@ include_once 'includes/header.php';
                             <canvas id="timeMetrics"></canvas>
                         </div>
                         <div class="time-metrics-values">
-                            <div class="time-metric">
+                            <div class="time-metric" id="tiempo-espera">
                                 <span class="time-label espera">Tiempo Promedio de Espera</span>
                                 <span class="time-value"><?php echo number_format($metricas['tiempo_espera'] ?? 0, 1); ?> minutos</span>
                             </div>
-                            <div class="time-metric">
+                            <div class="time-metric" id="tiempo-respuesta">
                                 <span class="time-label respuesta">Tiempo Promedio de Primera Respuesta</span>
                                 <span class="time-value"><?php echo number_format($metricas['tiempo_respuesta'], 1); ?> minutos</span>
                             </div>
-                            <div class="time-metric">
+                            <div class="time-metric" id="tiempo-duracion">
                                 <span class="time-label duracion">Duración Promedio de Conversación</span>
                                 <span class="time-value"><?php echo number_format($metricas['duracion_conversacion'], 1); ?> minutos</span>
                             </div>
                         </div>
+
                     </div>
                 </div>
                 
@@ -241,6 +244,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="assets/js/charts.js"></script>
 <script src="assets/js/dashboard.js"></script>
 
 <!-- Incluir el footer -->
