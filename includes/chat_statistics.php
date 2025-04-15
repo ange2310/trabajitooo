@@ -1,5 +1,4 @@
 <?php
-// includes/chat_statistics.php
 header('Content-Type: application/json');
 
 // Incluir el archivo principal que contiene las funciones

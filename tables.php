@@ -3,9 +3,9 @@
 session_start();
 
 // Incluir archivos necesarios
-require_once 'includes/conexion_api.php';
 require_once 'config/config.php';
-require_once 'includes/get_metrics.php'; // Eliminando la referencia a procesador_datos.php
+require_once 'includes/conexion_api.php';
+require_once 'includes/get_metrics.php';
 
 // Verificar si el usuario está logueado
 if (!isset($_SESSION['token']) || empty($_SESSION['token'])) {
@@ -21,15 +21,16 @@ $agent_email = isset($_GET['agent']) ? $_GET['agent'] : null;
 // Obtener datos de rendimiento de agentes
 $rendimiento_agentes = obtener_rendimiento_agente($inicio, $fin, null, $agent_email);
 
-// Debug: Ver la estructura de datos real
-if (!empty($rendimiento_agentes) && isset($rendimiento_agentes[0])) {
-    error_log('Estructura de datos del primer agente: ' . print_r($rendimiento_agentes[0], true));
-}
+// Procesar los datos para garantizar que tengan el formato esperado
+$rendimiento_procesado = procesar_datos_rendimiento($rendimiento_agentes);
 
-// Asegurarse de que siempre sea un array
-if (!is_array($rendimiento_agentes)) {
-    $rendimiento_agentes = [];
-    error_log('obtener_rendimiento_agente() devolvió un valor no array: ' . gettype($rendimiento_agentes));
+// Obtener estadísticas por día
+$estadisticas_diarias = obtener_estadisticas_chat($inicio, $fin, 'day');
+
+// Preparar datos para la tabla de estadísticas
+$estadisticas = [];
+if (isset($estadisticas_diarias['statistics']) && is_array($estadisticas_diarias['statistics'])) {
+    $estadisticas = $estadisticas_diarias['statistics'];
 }
 
 // Incluir el header
@@ -50,17 +51,17 @@ include_once 'includes/header.php';
                     <div class="filter-row">
                         <div class="form-group">
                             <label for="inicio">Fecha Inicio</label>
-                            <input type="date" id="inicio" name="inicio" value="<?php echo $inicio; ?>">
+                            <input type="date" id="inicio" name="inicio" value="<?php echo htmlspecialchars($inicio); ?>">
                         </div>
                         
                         <div class="form-group">
                             <label for="fin">Fecha Fin</label>
-                            <input type="date" id="fin" name="fin" value="<?php echo $fin; ?>">
+                            <input type="date" id="fin" name="fin" value="<?php echo htmlspecialchars($fin); ?>">
                         </div>
                         
                         <div class="form-group">
                             <label for="agent">Agente (opcional)</label>
-                            <input type="email" id="agent" name="agent" value="<?php echo $agent_email ?? ''; ?>" placeholder="correo@ejemplo.com">
+                            <input type="email" id="agent" name="agent" value="<?php echo htmlspecialchars($agent_email ?? ''); ?>" placeholder="correo@ejemplo.com">
                         </div>
                         
                         <div class="form-group">
@@ -75,7 +76,7 @@ include_once 'includes/header.php';
             <div class="table-card">
                 <h2>Rendimiento por Agente</h2>
                 
-                <?php if (empty($rendimiento_agentes)): ?>
+                <?php if (empty($rendimiento_procesado)): ?>
                     <div class="empty-state">
                         <i class="fas fa-info-circle"></i>
                         <p>No hay datos disponibles para los filtros seleccionados.</p>
@@ -91,41 +92,24 @@ include_once 'includes/header.php';
                                     <th>Tasa de Atención</th>
                                     <th>Tiempo Promedio de Respuesta</th>
                                     <th>Duración Promedio</th>
-                                    <th>Valoración</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($rendimiento_agentes as $agente): ?>
+                                <?php foreach ($rendimiento_procesado as $agente): ?>
                                     <tr>
-                                        <td><?php echo $agente['agent_name'] ?? 'Sin nombre'; ?></td>
-                                        <td><?php echo $agente['chats_received'] ?? 0; ?></td>
-                                        <td><?php echo $agente['chats_attended'] ?? 0; ?></td>
-                                        <td>
+                                        <td data-label="Agente"><?php echo htmlspecialchars($agente['agent_name']); ?></td>
+                                        <td data-label="Chats Recibidos"><?php echo intval($agente['chats_received']); ?></td>
+                                        <td data-label="Chats Atendidos"><?php echo intval($agente['chats_attended']); ?></td>
+                                        <td data-label="Tasa de Atención">
                                             <?php 
-                                                $tasa = (isset($agente['chats_received']) && $agente['chats_received'] > 0) 
-                                                    ? (($agente['chats_attended'] ?? 0) / $agente['chats_received']) * 100 
+                                                $tasa = ($agente['chats_received'] > 0) 
+                                                    ? ($agente['chats_attended'] / $agente['chats_received']) * 100 
                                                     : 0;
                                                 echo number_format($tasa, 2) . '%';
                                             ?>
                                         </td>
-                                        <td><?php echo number_format($agente['avg_response_time'] ?? 0, 2); ?> min</td>
-                                        <td><?php echo number_format($agente['avg_duration'] ?? 0, 2); ?> min</td>
-                                        <td>
-                                            <div class="rating">
-                                                <?php 
-                                                    $rating = $agente['rating'] ?? 0;
-                                                    for ($i = 1; $i <= 5; $i++) {
-                                                        if ($i <= $rating) {
-                                                            echo '<i class="fas fa-star"></i>';
-                                                        } elseif ($i - 0.5 <= $rating) {
-                                                            echo '<i class="fas fa-star-half-alt"></i>';
-                                                        } else {
-                                                            echo '<i class="far fa-star"></i>';
-                                                        }
-                                                    }
-                                                ?>
-                                                <span>(<?php echo number_format($rating, 1); ?>)</span>
-                                            </div>
+                                        <td data-label="Tiempo de Respuesta"><?php echo number_format($agente['avg_response_time'], 2); ?> min</td>
+                                        <td data-label="Duración"><?php echo number_format($agente['avg_duration'], 2); ?> min</td>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -138,17 +122,6 @@ include_once 'includes/header.php';
             <!-- Estadísticas por periodo -->
             <div class="table-card">
                 <h2>Estadísticas por Periodo</h2>
-                
-                <?php
-                // Obtener estadísticas por día
-                $estadisticas_diarias = obtener_estadisticas_chat($inicio, $fin, 'day');
-                
-                // Preparar datos para la tabla
-                $estadisticas = [];
-                if (isset($estadisticas_diarias['statistics']) && is_array($estadisticas_diarias['statistics'])) {
-                    $estadisticas = $estadisticas_diarias['statistics'];
-                }
-                ?>
                 
                 <?php if (empty($estadisticas)): ?>
                     <div class="empty-state">
@@ -171,20 +144,20 @@ include_once 'includes/header.php';
                             <tbody>
                                 <?php foreach ($estadisticas as $dia): ?>
                                     <tr>
-                                        <td><?php echo date('d/m/Y', strtotime($dia['period'] ?? date('Y-m-d'))); ?></td>
-                                        <td><?php echo $dia['total_chats'] ?? 0; ?></td>
-                                        <td><?php echo $dia['attended_chats'] ?? 0; ?></td>
-                                        <td><?php echo $dia['abandoned_chats'] ?? 0; ?></td>
-                                        <td>
+                                        <td data-label="Fecha"><?php echo date('d/m/Y', strtotime($dia['period'] ?? date('Y-m-d'))); ?></td>
+                                        <td data-label="Conversaciones"><?php echo intval($dia['total_chats'] ?? 0); ?></td>
+                                        <td data-label="Atendidas"><?php echo intval($dia['attended_chats'] ?? 0); ?></td>
+                                        <td data-label="Abandonadas"><?php echo intval($dia['abandoned_chats'] ?? 0); ?></td>
+                                        <td data-label="Tasa de Atención">
                                             <?php 
-                                                $total = $dia['total_chats'] ?? 0;
+                                                $total = intval($dia['total_chats'] ?? 0);
                                                 $tasa = ($total > 0) 
-                                                    ? (($dia['attended_chats'] ?? 0) / $total) * 100 
+                                                    ? (intval($dia['attended_chats'] ?? 0) / $total) * 100 
                                                     : 0;
                                                 echo number_format($tasa, 2) . '%';
                                             ?>
                                         </td>
-                                        <td><?php echo number_format($dia['avg_conversation_time'] ?? 0, 2); ?> min</td>
+                                        <td data-label="Tiempo Promedio"><?php echo number_format($dia['avg_conversation_time'] ?? 0, 2); ?> min</td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -195,4 +168,5 @@ include_once 'includes/header.php';
         </div>
     </div>
 </div>
+
 <script src="assets/js/dashboard.js"></script>

@@ -313,6 +313,67 @@ function fetchDashboardMetrics() {
         });
 }
 
+// Función para inicializar gráficos de tipo gauge
+function initGaugeChart(canvasId, color1, color2) {
+    console.log('Initializing gauge chart: ' + canvasId);
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.warn('Canvas not found: ' + canvasId);
+        return;
+    }
+    
+    // Destruir el gráfico existente si existe
+    if (chartInstances[canvasId]) {
+        console.log('Destroying existing chart: ' + canvasId);
+        chartInstances[canvasId].destroy();
+        chartInstances[canvasId] = null;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Obtener el valor del gauge del elemento hermano con clase gauge-value
+    const valueElement = canvas.parentElement.querySelector('.gauge-value');
+    const percentage = valueElement ? parseFloat(valueElement.textContent) : 0;
+    
+    // Crear gradiente
+    const gradientColors = ctx.createLinearGradient(0, 0, 0, 150);
+    gradientColors.addColorStop(0, color1);
+    gradientColors.addColorStop(1, color2);
+    
+    // Configurar y crear el gráfico
+    chartInstances[canvasId] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [percentage, 100 - percentage],
+                backgroundColor: [
+                    gradientColors,
+                    '#1a1e2c' // Color de fondo oscuro
+                ],
+                borderWidth: 0,
+                cutout: '75%'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: 1500,
+                easing: 'easeOutCubic'
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    enabled: false
+                }
+            }
+        }
+    });
+}
 // Función para actualizar las estadísticas de conversaciones
 function updateConversationStats(received, attended) {
     // Método 1: Buscar por los elementos stat-box y actualizar según el título
@@ -384,3 +445,91 @@ function updateTimeMetric(metricId, value) {
     }
 }
 
+// Añade esto al archivo assets/js/charts.js
+function updatePerformanceTable(goalsAchieved, totalGoals, abandonedConversations, totalConversations, abandonmentRate) {
+    // Actualizar el primer elemento de la tabla (Objetivos Alcanzados)
+    const objectivesRow = document.querySelector('.performance-table tbody tr:first-child');
+    if (objectivesRow) {
+        const quantityCell = objectivesRow.querySelector('td:nth-child(2)');
+        const progressBar = objectivesRow.querySelector('.progress-bar');
+        const percentageSpan = objectivesRow.querySelector('.progress-container span');
+        
+        if (quantityCell) {
+            quantityCell.textContent = `${goalsAchieved}/${totalGoals}`;
+        }
+        
+        const percentage = totalGoals > 0 ? (goalsAchieved / totalGoals) * 100 : 0;
+        
+        if (progressBar) {
+            progressBar.style.width = `${percentage}%`;
+        }
+        
+        if (percentageSpan) {
+            percentageSpan.textContent = `${percentage.toFixed(2)}%`;
+        }
+    }
+    
+    // Actualizar el segundo elemento de la tabla (Conversaciones Abandonadas)
+    const abandonedRow = document.querySelector('.performance-table tbody tr:last-child');
+    if (abandonedRow) {
+        const quantityCell = abandonedRow.querySelector('td:nth-child(2)');
+        const progressBar = abandonedRow.querySelector('.progress-bar');
+        const percentageSpan = abandonedRow.querySelector('.progress-container span');
+        
+        if (quantityCell) {
+            quantityCell.textContent = `${abandonedConversations}/${totalConversations}`;
+        }
+        
+        if (progressBar) {
+            progressBar.style.width = `${abandonmentRate}%`;
+        }
+        
+        if (percentageSpan) {
+            percentageSpan.textContent = `${abandonmentRate.toFixed(2)}%`;
+        }
+    }
+}
+// Añade esto al archivo assets/js/charts.js
+function updatePerformanceTable(goalsAchieved, totalGoals, abandonedConversations, totalConversations, abandonmentRate) {
+    // Actualizar el primer elemento de la tabla (Objetivos Alcanzados)
+    const objectivesRow = document.querySelector('.performance-table tbody tr:first-child');
+    if (objectivesRow) {
+        const quantityCell = objectivesRow.querySelector('td:nth-child(2)');
+        const progressBar = objectivesRow.querySelector('.progress-bar');
+        const percentageSpan = objectivesRow.querySelector('.progress-container span');
+        
+        if (quantityCell) {
+            quantityCell.textContent = `${goalsAchieved}/${totalGoals}`;
+        }
+        
+        const percentage = totalGoals > 0 ? (goalsAchieved / totalGoals) * 100 : 0;
+        
+        if (progressBar) {
+            progressBar.style.width = `${percentage}%`;
+        }
+        
+        if (percentageSpan) {
+            percentageSpan.textContent = `${percentage.toFixed(2)}%`;
+        }
+    }
+    
+    // Actualizar el segundo elemento de la tabla (Conversaciones Abandonadas)
+    const abandonedRow = document.querySelector('.performance-table tbody tr:last-child');
+    if (abandonedRow) {
+        const quantityCell = abandonedRow.querySelector('td:nth-child(2)');
+        const progressBar = abandonedRow.querySelector('.progress-bar');
+        const percentageSpan = abandonedRow.querySelector('.progress-container span');
+        
+        if (quantityCell) {
+            quantityCell.textContent = `${abandonedConversations}/${totalConversations}`;
+        }
+        
+        if (progressBar) {
+            progressBar.style.width = `${abandonmentRate}%`;
+        }
+        
+        if (percentageSpan) {
+            percentageSpan.textContent = `${abandonmentRate.toFixed(2)}%`;
+        }
+    }
+}

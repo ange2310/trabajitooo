@@ -14,7 +14,7 @@ function login_api_dev($username, $password) {
     if (array_key_exists($username, $valid_users) && $valid_users[$username] === $password) {
         // Simular respuesta exitosa de API
         $response = [
-            'access_token' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNzQ0NzI0OTYyfQ.Qjig60DyectYLuC2pSu7bwUNBy2JSyXvKZZAViyrQDk',
+            'access_token' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNzQ0NzM3MDk0fQ.8hIAJinj5PK8SShcyhScYI4HsuMUws2fqkP176AFcFk',
             'token_type' => 'bearer',
             'user' => [
                 'id' => 1,

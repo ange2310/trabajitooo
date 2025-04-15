@@ -190,8 +190,8 @@ function obtener_rendimiento_agente($start_date = null, $end_date = null, $agent
     }
 
     if (!isset($_SESSION['token'])) {
-        header('location: login.php'); // Redirigir a la página de inicio de sesión si no hay token
-        exit;
+        error_log('Error: No hay token de sesión disponible para obtener_rendimiento_agente()');
+        return [];
     }
 
     // Valores por defecto si no se proporcionan fechas
@@ -199,7 +199,7 @@ function obtener_rendimiento_agente($start_date = null, $end_date = null, $agent
         $start_date = date('Y-m-d', strtotime('-7 days')); // 7 días atrás
     }
     if ($end_date === null) {
-        $end_date = date('Y-m-d'); //Fecha actual
+        $end_date = date('Y-m-d'); // Fecha actual
     }
 
     // URL DE LA API CON DATOS OPCIONALES
@@ -207,18 +207,18 @@ function obtener_rendimiento_agente($start_date = null, $end_date = null, $agent
 
     // Si se proporciona un ID de agente, agregarlo a la URL
     if ($agent_id !== null) {
-        $url .= "&agent_id=$agent_id";
+        $url .= "&agent_id=" . urlencode($agent_id);
     } elseif ($agent_email !== null) {
-        $url .= "&agent_email=$agent_email";
+        $url .= "&agent_email=" . urlencode($agent_email);
     }
 
     // Obtener el token de sesión
     $token = $_SESSION['token'];
 
-    // Verificar si el token está vacío o no está disponible
+    // Verificar si el token está vacío
     if (empty($token)) {
-        echo 'Error: El token de autenticación no está disponible.';
-        return null;
+        error_log('Error: El token de autenticación está vacío en obtener_rendimiento_agente()');
+        return [];
     }
 
     // Config de headers, incluye el token de sesión
@@ -232,21 +232,28 @@ function obtener_rendimiento_agente($start_date = null, $end_date = null, $agent
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    
+    // Configurar timeouts para evitar bloqueos
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 
     $response = curl_exec($ch);
 
     if ($response === false) {
-        // Manejar el error si curl falló
-        echo 'Error en la solicitud: ' . curl_error($ch);
+        // Registrar el error y cerrar cURL
+        $error = curl_error($ch);
         curl_close($ch);
-        return null;
+        error_log('Error en la solicitud cURL para rendimiento_agente: ' . $error);
+        return [];
     }
 
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    
+    curl_close($ch);
+
+    // Si es error de autenticación, registrar el problema
     if ($httpCode === 401) {
-        echo 'Error de autenticación: ' . $response;
-        return null;
+        error_log('Error de autenticación (401) en obtener_rendimiento_agente: ' . $response);
+        return [];
     }
 
     // Verificar si la solicitud fue exitosa
@@ -256,20 +263,108 @@ function obtener_rendimiento_agente($start_date = null, $end_date = null, $agent
 
         // Verificar si hubo un error al decodificar el JSON
         if (json_last_error() !== JSON_ERROR_NONE) {
-            echo 'Error al decodificar el JSON: ' . json_last_error_msg();
-            return null;
+            error_log('Error al decodificar JSON en obtener_rendimiento_agente: ' . json_last_error_msg());
+            return [];
         }
 
-        return $data;
+        // Verificar la estructura esperada
+        if (isset($data['agents']) && is_array($data['agents'])) {
+            // Si tiene una propiedad 'agents', retornar esa lista
+            return $data['agents'];
+        } else if (is_array($data) && !empty($data) && isset($data[0])) {
+            // Si es directamente un array de agentes
+            return $data;
+        } else if (isset($data['agent']) && is_array($data['agent'])) {
+            // Si es un solo agente, devolver como array
+            return [$data['agent']];
+        } else {
+            // Formato inesperado, registrar y devolver vacío
+            error_log('Formato de respuesta inesperado en obtener_rendimiento_agente: ' . json_encode($data));
+            return [];
+        }
     } else {
         // Manejar el error si la respuesta no es 200
-        echo 'Error HTTP: ' . $httpCode . ' Respuesta: ' . $response;
-        return null;
+        error_log('Error HTTP en obtener_rendimiento_agente: ' . $httpCode . ' Respuesta: ' . $response);
+        return [];
     }
-
-
 }
 
+/**
+ * Procesa los datos de rendimiento para asegurar estructura uniforme
+ */
+// En includes/get_metrics.php, modifica la función procesar_datos_rendimiento()
+function procesar_datos_rendimiento($datos) {
+    // Si no es un array o está vacío, retornar array vacío
+    if (!is_array($datos) || empty($datos)) {
+        return [];
+    }
+    
+    $resultado = [];
+    
+    // Verificar si la estructura es un array de agentes o un objeto con propiedad 'agents'
+    if (isset($datos['agents']) && is_array($datos['agents'])) {
+        // Si el formato es {agents: [...]}
+        $resultado = $datos['agents'];
+    } else {
+        // Asumimos que es directamente un array de agentes
+        $resultado = $datos;
+    }
+    
+    // Asegurar que cada agente tenga todas las propiedades necesarias
+    foreach ($resultado as &$agente) {
+        // Priorizar el email como identificador del agente cuando no hay nombre
+        $agente['agent_name'] = $agente['agent_name'] ?? $agente['name'] ?? $agente['email'] ?? $agente['agent_email'] ?? 'Sin nombre';
+        
+        // Si aún no tenemos nombre pero tenemos email, usar el email como nombre
+        if ($agente['agent_name'] == 'Sin nombre' && isset($agente['email'])) {
+            $agente['agent_name'] = $agente['email'];
+        } else if ($agente['agent_name'] == 'Sin nombre' && isset($agente['agent_email'])) {
+            $agente['agent_name'] = $agente['agent_email'];
+        }
+        
+        $agente['chats_received'] = $agente['chats_received'] ?? $agente['received_chats'] ?? $agente['total_chats'] ?? 0;
+        $agente['chats_attended'] = $agente['chats_attended'] ?? $agente['attended_chats'] ?? 0;
+        $agente['avg_response_time'] = $agente['avg_response_time'] ?? $agente['average_response_time'] ?? 0;
+        $agente['avg_duration'] = $agente['avg_duration'] ?? $agente['average_duration'] ?? 0;
+        $agente['rating'] = $agente['rating'] ?? $agente['average_rating'] ?? 0;
+    }
+    
+    return $resultado;
+}
+
+/**
+ * Prepara los datos para la visualización en la tabla de agentes
+ * Esta función se puede usar en tables.php para garantizar consistencia
+ */
+function preparar_tabla_agentes($datos) {
+    // Primero procesamos los datos para tener estructura uniforme
+    $datos_procesados = procesar_datos_rendimiento($datos);
+    
+    // Luego calculamos métricas adicionales y formateamos
+    $tabla_datos = [];
+    
+    foreach ($datos_procesados as $agente) {
+        // Calcular tasa de atención
+        $recibidos = intval($agente['chats_received']);
+        $atendidos = intval($agente['chats_attended']);
+        
+        $tasa_atencion = ($recibidos > 0) ? ($atendidos / $recibidos) * 100 : 0;
+        
+        // Agregar fila formateada a la tabla
+        $tabla_datos[] = [
+            'nombre' => htmlspecialchars($agente['agent_name']),
+            'recibidos' => $recibidos,
+            'atendidos' => $atendidos,
+            'tasa_atencion' => number_format($tasa_atencion, 2) . '%',
+            'tiempo_respuesta' => number_format(floatval($agente['avg_response_time']), 2) . ' min',
+            'duracion' => number_format(floatval($agente['avg_duration']), 2) . ' min',
+            'valoracion' => floatval($agente['rating']),
+            'valoracion_formato' => number_format(floatval($agente['rating']), 1)
+        ];
+    }
+    
+    return $tabla_datos;
+}
 
 
 function obtener_configuracion_dashboard() {

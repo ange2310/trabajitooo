@@ -103,7 +103,7 @@ include_once 'includes/header.php';
                             <canvas id="gaugeAtencion"></canvas>
                             <div class="gauge-value"><?php echo $porcentajeAtencion; ?>%</div>
                         </div>
-                        <p class="gauge-label">Basado en <?php echo $metricas['total_chats']; ?> chats</p>
+                        <p class="gauge-label">Basado en <?php echo $metricas['conversaciones_recibidas']; ?> chats</p>
                     </div>
                     
                     <!-- Tasa de Oportunidad -->
@@ -113,7 +113,7 @@ include_once 'includes/header.php';
                             <canvas id="gaugeOportunidad"></canvas>
                             <div class="gauge-value"><?php echo number_format($metricas['oportunidad'], 2); ?>%</div>
                         </div>
-                        <p class="gauge-label">Basado en <?php echo $metricas['total_chats']; ?> chats</p>
+                        <p class="gauge-label">Basado en <?php echo $metricas['conversaciones_recibidas']; ?> chats</p>
                     </div>
                     
                     <!-- Métricas de Tiempo -->
@@ -149,7 +149,7 @@ include_once 'includes/header.php';
                             <canvas id="gaugeAbandono"></canvas>
                             <div class="gauge-value"><?php echo number_format($metricas['abandono'], 2); ?>%</div>
                         </div>
-                        <p class="gauge-label">Basado en <?php echo $metricas['total_chats']; ?> chats</p>
+                        <p class="gauge-label">Basado en <?php echo $metricas['conversaciones_recibidas']; ?> chats</p>
                     </div>
                     
                     <!-- Conversaciones -->
