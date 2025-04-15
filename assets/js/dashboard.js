@@ -1,9 +1,7 @@
-// assets/js/dashboard.js
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Dashboard.js: DOM Content Loaded');
     
     /* ===== Manejo del Toggle del Sidebar ===== */
-    // Elementos DOM
     const sidebar = document.querySelector('.sidebar');
     const contentWrapper = document.querySelector('.content-wrapper');
     const toggleSidebar = document.getElementById('toggle-sidebar');
@@ -55,22 +53,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Cerrar sidebar en móviles al hacer clic en enlaces
-    const sidebarLinks = document.querySelectorAll('.sidebar-menu a, .logout-btn');
-    if (window.innerWidth <= 992) {
-        sidebarLinks.forEach(link => {
-            link.addEventListener('click', function() {
-                sidebar.classList.remove('active');
-            });
-        });
-    }
-    
-    // Añadir orden de animación a las cards
-    const cards = document.querySelectorAll('.dashboard-card');
-    cards.forEach((card, index) => {
-        card.style.setProperty('--animation-order', index);
-    });
-
     /* ===== Manejo de los Gráficos y Actualización de Datos ===== */
     
     // Configurar listener para cambio de fecha manual (sin submit de formulario)
@@ -78,7 +60,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Inicializar datos si están disponibles desde PHP
     if (typeof dashboard_data !== 'undefined') {
-        console.log('Datos del dashboard disponibles desde PHP');
         
         // Esperar a que los gráficos estén inicializados antes de actualizar
         setTimeout(function() {
@@ -95,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Si no hay datos por hora en el paso inicial, intentar cargarlos
                 cargarDatosPorHora();
             }
-        }, 1000); // Dar tiempo suficiente para que charts.js inicialice los gráficos
+        }, 5); // tiempo para que charts.js inicialice los gráficos en ms
     }
 });
 

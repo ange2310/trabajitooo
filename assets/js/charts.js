@@ -1,6 +1,3 @@
-// assets/js/charts.js
-// javascript para los gráficos de la página principal
-
 // Variable global para guardar referencias a los gráficos
 var chartInstances = {};
 
@@ -140,7 +137,6 @@ function initTimeMetricsChart() {
 
 // Función para inicializar el gráfico de conversaciones por hora
 function initHourlyChart() {
-    console.log('Initializing hourly chart');
     const canvas = document.getElementById('hourlyChats');
     if (!canvas) {
         console.warn('Canvas not found: hourlyChats');
@@ -149,7 +145,6 @@ function initHourlyChart() {
     
     // Destruir el gráfico existente si existe
     if (chartInstances['hourlyChats']) {
-        console.log('Destroying existing hourly chart');
         chartInstances['hourlyChats'].destroy();
         chartInstances['hourlyChats'] = null;
     }
@@ -239,27 +234,197 @@ function initHourlyChart() {
 
 // Función para actualizar el gráfico de conversaciones por hora con datos dinámicos
 function updateHourlyChart(labels, values) {
-    console.log('Updating hourly chart with new data');
-    if (!chartInstances['hourlyChats']) {
-        console.warn('Hourly chart not initialized yet. Initializing now.');
-        initHourlyChart();
+    console.log('Updating hourly chart with new data:', { labels, values });
+    
+    // Verificar si el canvas existe
+    const canvas = document.getElementById('hourlyChats');
+    if (!canvas) {
+        console.warn('Canvas not found: hourlyChats');
+        return;
     }
     
-    const chart = chartInstances['hourlyChats'];
-    if (chart) {
-        // Si no hay datos, mostrar un gráfico vacío
-        if (!labels.length || !values.length) {
-            chart.data.labels = [];
-            chart.data.datasets[0].data = [];
-            chart.update();
-            console.log('Chart updated with empty data');
-            return;
-        }
+    // Si el gráfico ya existe, destruirlo completamente
+    if (chartInstances['hourlyChats']) {
+        console.log('Destroying existing hourly chart');
+        chartInstances['hourlyChats'].destroy();
+        chartInstances['hourlyChats'] = null;
+    }
+    
+    // Obtener el contexto para dibujar el gráfico
+    const ctx = canvas.getContext('2d');
+    
+    // Si no hay datos, mostrar un gráfico vacío con mensaje
+    if (!labels || !values || !labels.length || !values.length) {
+        // Crear un gráfico vacío con mensaje
+        chartInstances['hourlyChats'] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                datasets: [{
+                    label: 'Conversaciones',
+                    data: [0, 0, 0, 0, 0, 0],
+                    borderColor: 'rgba(59, 130, 246, 0.5)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: 5,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: {
+                                size: 10
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                }
+            },
+            plugins: [{
+                id: 'noDataText',
+                afterDraw: function(chart) {
+                    if (chart.data.datasets[0].data.every(item => item === 0)) {
+                        var ctx = chart.ctx;
+                        var width = chart.width;
+                        var height = chart.height;
+                        
+                        chart.clear();
+                        
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                        ctx.fillRect(0, 0, width, height);
+                        
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.font = '16px Arial';
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                        ctx.fillText('No hay datos disponibles para esta fecha', width / 2, height / 2);
+                    }
+                }
+            }]
+        });
         
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = values;
-        chart.update();
-        console.log('Chart updated with data:', {labels, values});
+        return;
+    }
+    
+    // Crear gradiente para el área bajo la línea
+    const gradientColors = ctx.createLinearGradient(0, 0, 0, 200);
+    gradientColors.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
+    gradientColors.addColorStop(1, 'rgba(59, 130, 246, 0)');
+    
+    // Configurar y crear el gráfico con los datos proporcionados
+    chartInstances['hourlyChats'] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Conversaciones',
+                data: values,
+                borderColor: '#3b82f6',
+                backgroundColor: gradientColors,
+                pointBackgroundColor: '#3b82f6',
+                pointBorderColor: '#fff',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        font: {
+                            size: 10
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        font: {
+                            size: 10
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    padding: 10,
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    bodyFont: {
+                        size: 12
+                    },
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) {
+                            return context.raw + ' conversaciones';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    console.log('Hourly chart updated successfully');
+}
+
+// Función para actualizar las estadísticas de conversaciones por hora
+function updateHourlyConversationsChart(data) {
+    console.log('Updating hourly conversations chart with data:', data);
+    
+    // Verificar si tenemos datos en el formato esperado
+    if (data && data.hourly_data && Array.isArray(data.hourly_data.labels) && Array.isArray(data.hourly_data.values)) {
+        updateHourlyChart(data.hourly_data.labels, data.hourly_data.values);
+    } else if (data && Array.isArray(data.labels) && Array.isArray(data.values)) {
+        // Formato alternativo
+        updateHourlyChart(data.labels, data.values);
+    } else {
+        console.warn('No valid hourly data format found, displaying empty chart');
+        updateHourlyChart([], []);
     }
 }
 
@@ -280,7 +445,7 @@ function fetchDashboardMetrics() {
             updateGaugeValue('gaugeAtencion', data.attendance_rate || 0);
             updateGaugeValue('gaugeOportunidad', data.opportunity_rate || 0);
             updateGaugeValue('gaugeAbandono', data.abandonment_rate || 0);
-            updateGaugeValue('gaugeConversaciones', data.total_conversations_received || 0);
+            updateGaugeValue('gaugeConversaciones', data.attendance_rate || 0);
 
             // Actualizar métricas de tiempo usando los nuevos campos
             updateTimeMetric('tiempo-espera', data.average_wait_minutes || 0);
@@ -293,21 +458,16 @@ function fetchDashboardMetrics() {
             // Actualizar tabla de métricas de rendimiento
             updatePerformanceTable(
                 data.goal_achieved_count || 0,
-                50, // Total de objetivos (parece ser un valor fijo en tu interfaz)
+                50, // Suponiendo que el total de objetivos es 50
                 data.total_abandoned || 0,
                 data.total_conversations_received || 0,
                 data.abandonment_rate || 0
             );
-
-            // Actualizar gráfico de conversaciones por hora
-            // Si tienes datos de conversaciones por hora en la respuesta
-            updateHourlyConversationsChart(data);
             
             // Inicializar los gráficos (ahora que los valores están en el DOM)
             initCharts();
         })
         .catch(error => {
-            console.error('Error al obtener las métricas del dashboard:', error);
             // Inicializar con valores predeterminados en caso de error
             initCharts();
         });
@@ -333,8 +493,12 @@ function initGaugeChart(canvasId, color1, color2) {
     
     // Obtener el valor del gauge del elemento hermano con clase gauge-value
     const valueElement = canvas.parentElement.querySelector('.gauge-value');
-    const percentage = valueElement ? parseFloat(valueElement.textContent) : 0;
-    
+    const percentage = valueElement ? parseFloat(valueElement.textContent.replace('%', '').trim()) : 0;
+
+    if (valueElement) {
+        valueElement.textContent = percentage + '%';
+    }
+
     // Crear gradiente
     const gradientColors = ctx.createLinearGradient(0, 0, 0, 150);
     gradientColors.addColorStop(0, color1);
@@ -376,7 +540,6 @@ function initGaugeChart(canvasId, color1, color2) {
 }
 // Función para actualizar las estadísticas de conversaciones
 function updateConversationStats(received, attended) {
-    // Método 1: Buscar por los elementos stat-box y actualizar según el título
     const statBoxes = document.querySelectorAll('.stat-box');
     
     statBoxes.forEach(box => {
@@ -393,8 +556,8 @@ function updateConversationStats(received, attended) {
             }
         }
     });
-    
-    // Método 2 (alternativo): Si el método 1 falla por algún motivo, 
+
+    // Si el método 1 falla por algún motivo, 
     // buscar directamente por el encabezado y actualizar el valor asociado
     if (!statBoxes.length) {
         document.querySelectorAll('h3').forEach(h3 => {
@@ -424,7 +587,7 @@ function updateGaugeValue(canvasId, value) {
     }
 }
 
-// Función actualizada para modificar las métricas de tiempo
+// Función para modificar las métricas de tiempo
 function updateTimeMetric(metricId, value) {
     const element = document.getElementById(metricId);
     if (element) {
@@ -445,51 +608,7 @@ function updateTimeMetric(metricId, value) {
     }
 }
 
-// Añade esto al archivo assets/js/charts.js
-function updatePerformanceTable(goalsAchieved, totalGoals, abandonedConversations, totalConversations, abandonmentRate) {
-    // Actualizar el primer elemento de la tabla (Objetivos Alcanzados)
-    const objectivesRow = document.querySelector('.performance-table tbody tr:first-child');
-    if (objectivesRow) {
-        const quantityCell = objectivesRow.querySelector('td:nth-child(2)');
-        const progressBar = objectivesRow.querySelector('.progress-bar');
-        const percentageSpan = objectivesRow.querySelector('.progress-container span');
-        
-        if (quantityCell) {
-            quantityCell.textContent = `${goalsAchieved}/${totalGoals}`;
-        }
-        
-        const percentage = totalGoals > 0 ? (goalsAchieved / totalGoals) * 100 : 0;
-        
-        if (progressBar) {
-            progressBar.style.width = `${percentage}%`;
-        }
-        
-        if (percentageSpan) {
-            percentageSpan.textContent = `${percentage.toFixed(2)}%`;
-        }
-    }
-    
-    // Actualizar el segundo elemento de la tabla (Conversaciones Abandonadas)
-    const abandonedRow = document.querySelector('.performance-table tbody tr:last-child');
-    if (abandonedRow) {
-        const quantityCell = abandonedRow.querySelector('td:nth-child(2)');
-        const progressBar = abandonedRow.querySelector('.progress-bar');
-        const percentageSpan = abandonedRow.querySelector('.progress-container span');
-        
-        if (quantityCell) {
-            quantityCell.textContent = `${abandonedConversations}/${totalConversations}`;
-        }
-        
-        if (progressBar) {
-            progressBar.style.width = `${abandonmentRate}%`;
-        }
-        
-        if (percentageSpan) {
-            percentageSpan.textContent = `${abandonmentRate.toFixed(2)}%`;
-        }
-    }
-}
-// Añade esto al archivo assets/js/charts.js
+// Función para actualizar la tabla de rendimiento
 function updatePerformanceTable(goalsAchieved, totalGoals, abandonedConversations, totalConversations, abandonmentRate) {
     // Actualizar el primer elemento de la tabla (Objetivos Alcanzados)
     const objectivesRow = document.querySelector('.performance-table tbody tr:first-child');

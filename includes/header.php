@@ -1,4 +1,3 @@
-<!-- includes/header.php - Encabezado de todas las páginas -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -20,7 +19,7 @@
     
     <!-- CSS personalizado -->
     <link rel="stylesheet" href="assets/css/styles.css">
-
     <link rel="stylesheet" href="assets/css/agent-tables.css">
+    <link rel="stylesheet" href="assets/css/conversaciones.css">
 </head>
 <body>

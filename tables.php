@@ -1,5 +1,4 @@
 <?php
-// tables.php - Página de tablas de datos
 session_start();
 
 // Incluir archivos necesarios
@@ -31,6 +30,8 @@ $estadisticas_diarias = obtener_estadisticas_chat($inicio, $fin, 'day');
 $estadisticas = [];
 if (isset($estadisticas_diarias['statistics']) && is_array($estadisticas_diarias['statistics'])) {
     $estadisticas = $estadisticas_diarias['statistics'];
+    // Debug: Registrar para verificar el formato de los datos
+    error_log('Estadísticas diarias: ' . print_r($estadisticas[0] ?? [], true));
 }
 
 // Incluir el header
@@ -100,7 +101,7 @@ include_once 'includes/header.php';
                                         <td data-label="Agente"><?php echo htmlspecialchars($agente['agent_name']); ?></td>
                                         <td data-label="Chats Recibidos"><?php echo intval($agente['chats_received']); ?></td>
                                         <td data-label="Chats Atendidos"><?php echo intval($agente['chats_attended']); ?></td>
-                                        <td data-label="Tasa de Atención">
+                                        <td data-label="Tasa de Atención" class="<?php echo ($agente['chats_received'] > 0 && $agente['chats_attended'] > 0) ? 'text-success' : ''; ?>">
                                             <?php 
                                                 $tasa = ($agente['chats_received'] > 0) 
                                                     ? ($agente['chats_attended'] / $agente['chats_received']) * 100 
@@ -108,8 +109,12 @@ include_once 'includes/header.php';
                                                 echo number_format($tasa, 2) . '%';
                                             ?>
                                         </td>
-                                        <td data-label="Tiempo de Respuesta"><?php echo number_format($agente['avg_response_time'], 2); ?> min</td>
-                                        <td data-label="Duración"><?php echo number_format($agente['avg_duration'], 2); ?> min</td>
+                                        <td data-label="Tiempo de Respuesta"><?php echo number_format(floatval($agente['avg_response_time']), 2); ?> min</td>
+                                        <td data-label="Duración Promedio">
+                                            <?php 
+                                                $duracion = floatval($agente['avg_duration']);
+                                                echo number_format($duracion, 2) . ' min';
+                                            ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -157,7 +162,27 @@ include_once 'includes/header.php';
                                                 echo number_format($tasa, 2) . '%';
                                             ?>
                                         </td>
-                                        <td data-label="Tiempo Promedio"><?php echo number_format($dia['avg_conversation_time'] ?? 0, 2); ?> min</td>
+                                        <td data-label="Tiempo Promedio">
+                                            <?php 
+                                                // Inicializar en 0.0 como predeterminado
+                                                $tiempo_promedio = 0.0;
+
+                                                // Verificar primero en las métricas globales
+                                                if (!empty($metricas['duracion_conversacion'])) {
+                                                    $tiempo_promedio = $metricas['duracion_conversacion'];
+                                                } 
+                                                // Luego buscar en posibles claves dentro del array $dia
+                                                elseif (!empty($dia['average_duration_minutes'])) {
+                                                    $tiempo_promedio = $dia['average_duration_minutes'];
+                                                } 
+                                                elseif (!empty($dia['avg_duration'])) {
+                                                    $tiempo_promedio = $dia['avg_duration'];
+                                                } 
+
+                                                // Mostrar el valor con 2 decimales
+                                                echo number_format(floatval($tiempo_promedio), 2) . ' min';
+                                            ?>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>

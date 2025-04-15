@@ -1,5 +1,4 @@
 <?php
-// includes/conexion_api.php
 
 function getMetricsFromAPI() {
     global $config;
@@ -62,12 +61,8 @@ function getMetricsFromAPI() {
 
 function login_api($username, $password) {
     global $config;
-    
-    // Para desarrollo, usamos credenciales de prueba
-    // En producción, descomentar este bloque para conectar con la API real
-    /*
     // Inicializar cURL
-    $ch = curl_init($config['api_url'] . '/auth/login');
+    $ch = curl_init($config['api_url'] . '/login');
     
     // Configurar opciones cURL
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -128,13 +123,6 @@ function login_api($username, $password) {
     
     // Devolver los datos
     return $data;
-    */
-    
-
-        // Llamar a la función de desarrollo durante las pruebas
-        include_once 'datos_prueba.php';
-        return login_api_dev($username, $password);
-    
 }
 
 ?>

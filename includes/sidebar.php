@@ -1,4 +1,3 @@
-<!-- includes/sidebar.php - Menú lateral del dashboard -->
 <div class="sidebar <?php echo isset($_COOKIE['sidebar_collapsed']) && $_COOKIE['sidebar_collapsed'] === 'true' ? 'collapsed' : ''; ?>">
     <div class="sidebar-header">
         <button id="toggle-sidebar" class="sidebar-toggle">

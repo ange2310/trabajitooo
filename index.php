@@ -1,5 +1,5 @@
 <?php
-// index.php - Archivo principal del dashboard
+
 session_start();
 
 // Incluir archivos necesarios
@@ -29,23 +29,29 @@ try {
     // Obtener datos de la API
     $metricas_datos = obtener_metricas_dashboard($fecha);
     
+    // Depuración para ver qué datos estamos recibiendo
+    error_log('Datos recibidos de la API: ' . print_r($metricas_datos, true));
+    
+    // Extraer los datos según la estructura recibida
+    $datos_metricas = isset($metricas_datos['metrics']) ? $metricas_datos['metrics'] : $metricas_datos;
+    
     // Asegurarse de que todas las claves necesarias estén presentes
     $metricas = [
-        'atencion' => $metricas_datos['attention_rate'] ?? 0,
-        'oportunidad' => $metricas_datos['opportunity_rate'] ?? 0,
-        'abandono' => $metricas_datos['abandonment_rate'] ?? 0,
-        'tiempo_espera' => $metricas_datos['average_wait_time'] ?? 0,
-        'tiempo_respuesta' => $metricas_datos['average_response_time'] ?? 0,
-        'duracion_conversacion' => $metricas_datos['average_conversation_duration'] ?? 0,
-        'conversaciones_recibidas' => $metricas_datos['total_conversations'] ?? 0,
-        'conversaciones_atendidas' => $metricas_datos['attended_conversations'] ?? 0,
-        'objetivos_cantidad' => isset($metricas_datos['goals_achieved']) && isset($metricas_datos['total_goals']) ? 
-            $metricas_datos['goals_achieved'] . '/' . $metricas_datos['total_goals'] : '0/0',
-        'objetivos_porcentaje' => isset($metricas_datos['goals_achieved']) && isset($metricas_datos['total_goals']) && $metricas_datos['total_goals'] > 0 ? 
-            ($metricas_datos['goals_achieved'] / $metricas_datos['total_goals'] * 100) : 0,
-        'abandonadas_cantidad' => isset($metricas_datos['abandoned_conversations']) && isset($metricas_datos['total_conversations']) ? 
-            $metricas_datos['abandoned_conversations'] . '/' . $metricas_datos['total_conversations'] : '0/0',
-        'total_chats' => $metricas_datos['total_conversations'] ?? 0
+        'atencion' => $datos_metricas['attendance_rate'] ?? 0,
+        'oportunidad' => $datos_metricas['opportunity_rate'] ?? 0,
+        'abandono' => $datos_metricas['abandonment_rate'] ?? 0,
+        'tiempo_espera' => $datos_metricas['average_wait_minutes'] ?? 0,
+        'tiempo_respuesta' => $datos_metricas['average_first_response_minutes'] ?? 0,
+        'duracion_conversacion' => $datos_metricas['average_duration_minutes'] ?? 0,
+        'conversaciones_recibidas' => $datos_metricas['total_conversations_received'] ?? 0,
+        'conversaciones_atendidas' => $datos_metricas['total_conversations_attended'] ?? 0,
+        'objetivos_cantidad' => isset($datos_metricas['goal_achieved_count']) ? 
+            $datos_metricas['goal_achieved_count'] . '/50' : '0/50',
+        'objetivos_porcentaje' => isset($datos_metricas['goal_achieved_count']) ? 
+            ($datos_metricas['goal_achieved_count'] / 50 * 100) : 0,
+        'abandonadas_cantidad' => isset($datos_metricas['total_abandoned']) && isset($datos_metricas['total_conversations_received']) ? 
+            $datos_metricas['total_abandoned'] . '/' . $datos_metricas['total_conversations_received'] : '0/0',
+        'total_chats' => $datos_metricas['total_conversations_received'] ?? 0
     ];
     
     $config_dashboard = obtener_configuracion_dashboard();
@@ -54,18 +60,12 @@ try {
     // Procesar datos para usar en los gráficos
     $metricas = procesar_metricas($metricas);
     $datos_grafico = procesar_datos_grafico_horas($conversaciones_por_hora);
-
-    // NUEVA LÍNEA: Verificar si tenemos datos reales para las conversaciones por hora
-    if (empty($datos_grafico['labels'])) {
-        // Registrar error si no hay datos
-        error_log("No se obtuvieron datos para el gráfico de conversaciones por hora");
-    }
 } catch (Exception $e) {
     // Si hay un error con la API, mostrar mensaje
     $error_api = "Error al conectar con la API: " . $e->getMessage();
+    error_log("Error en index.php: " . $e->getMessage());
 }
 
-// Incluir el header
 include_once 'includes/header.php';
 ?>
 
@@ -101,7 +101,7 @@ include_once 'includes/header.php';
                         <h2>Tasa de Atención</h2>
                         <div class="gauge-container">
                             <canvas id="gaugeAtencion"></canvas>
-                            <div class="gauge-value"><?php echo $porcentajeAtencion; ?>%</div>
+                            <div class="gauge-value" data-value="<?php echo $porcentajeAtencion; ?>"></div>
                         </div>
                         <p class="gauge-label">Basado en <?php echo $metricas['conversaciones_recibidas']; ?> chats</p>
                     </div>
@@ -111,7 +111,7 @@ include_once 'includes/header.php';
                         <h2>Tasa de Oportunidad</h2>
                         <div class="gauge-container">
                             <canvas id="gaugeOportunidad"></canvas>
-                            <div class="gauge-value"><?php echo number_format($metricas['oportunidad'], 2); ?>%</div>
+                            <div class="gauge-value" data-value="<?php echo number_format($metricas['oportunidad'], 2); ?>"></div>
                         </div>
                         <p class="gauge-label">Basado en <?php echo $metricas['conversaciones_recibidas']; ?> chats</p>
                     </div>
@@ -129,11 +129,11 @@ include_once 'includes/header.php';
                             </div>
                             <div class="time-metric" id="tiempo-respuesta">
                                 <span class="time-label respuesta">Tiempo Promedio de Primera Respuesta</span>
-                                <span class="time-value"><?php echo number_format($metricas['tiempo_respuesta'], 1); ?> minutos</span>
+                                <span class="time-value"><?php echo number_format($metricas['tiempo_respuesta'] ?? 0, 1); ?> minutos</span>
                             </div>
                             <div class="time-metric" id="tiempo-duracion">
                                 <span class="time-label duracion">Duración Promedio de Conversación</span>
-                                <span class="time-value"><?php echo number_format($metricas['duracion_conversacion'], 1); ?> minutos</span>
+                                <span class="time-value"><?php echo number_format($metricas['duracion_conversacion'] ?? 0, 1); ?> minutos</span>
                             </div>
                         </div>
 
@@ -147,8 +147,9 @@ include_once 'includes/header.php';
                         <h2>Tasa de Abandono</h2>
                         <div class="gauge-container">
                             <canvas id="gaugeAbandono"></canvas>
-                            <div class="gauge-value"><?php echo number_format($metricas['abandono'], 2); ?>%</div>
+                            <div class="gauge-value" data-value="<?php echo number_format($metricas['abandono'], 2); ?>"></div>
                         </div>
+
                         <p class="gauge-label">Basado en <?php echo $metricas['conversaciones_recibidas']; ?> chats</p>
                     </div>
                     
@@ -168,8 +169,9 @@ include_once 'includes/header.php';
                             </div>
                             <div class="conversation-gauge">
                                 <canvas id="gaugeConversaciones"></canvas>
-                                <div class="gauge-value"><?php echo number_format($metricas['atencion'], 2); ?>%</div>
+                                <div class="gauge-value" data-value="<?php echo $porcentajeAtencion; ?>"></div>
                             </div>
+
                         </div>
                     </div>
                     
@@ -238,30 +240,26 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Datos para gráfico de horas:', hourlyData);
     
     // Verificar si hay datos para graficar
-    if (hourlyData.labels.length > 0 && hourlyData.values.length > 0) {
-        console.log('Hay datos para actualizar el gráfico');
-        
-        // Esperamos 800ms para asegurar que el gráfico ya está inicializado
-        setTimeout(function() {
-            if (typeof updateHourlyChart === 'function') {
+    const fecha = document.getElementById('fecha')?.value || "<?php echo $fecha; ?>";
+    console.log('Fecha seleccionada:', fecha);
+
+    setTimeout(function() {
+        // Si hay datos y la función está disponible, actualizar el gráfico
+        if (typeof updateHourlyChart === 'function') {
+            // Al cambiar de fecha, siempre limpiar y volver a crear el gráfico
+            // Pasando los datos según si hay contenido o no
+            if (hourlyData.labels.length > 0 && hourlyData.values.length > 0) {
+                console.log('Actualizando gráfico con datos:', hourlyData);
                 updateHourlyChart(hourlyData.labels, hourlyData.values);
-                console.log('Gráfico actualizado con datos reales');
             } else {
-                console.error('Función updateHourlyChart no está disponible');
-            }
-        }, 800);
-    } else {
-        console.log('No hay datos para mostrar en el gráfico');
-        
-        // Para una fecha sin datos, forzar un gráfico vacío
-        setTimeout(function() {
-            if (typeof updateHourlyChart === 'function') {
-                // Actualizar con arrays vacíos para mostrar un gráfico sin datos
+                console.log('No hay datos para esta fecha, mostrando gráfico vacío');
+                // Pasar arrays vacíos para forzar la creación de un gráfico vacío
                 updateHourlyChart([], []);
-                console.log('Gráfico actualizado con arrays vacíos');
             }
-        }, 800);
-    }
+        } else {
+            console.error('Función updateHourlyChart no está disponible');
+        }
+    }, 800);
 });
 </script>
 
