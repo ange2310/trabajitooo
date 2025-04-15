@@ -28,68 +28,6 @@ function initCharts() {
     initHourlyChart();
 }
 
-// Función para inicializar gráficos de tipo gauge
-function initGaugeChart(canvasId, color1, color2) {
-    console.log('Initializing gauge chart: ' + canvasId);
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) {
-        console.warn('Canvas not found: ' + canvasId);
-        return;
-    }
-    
-    // Destruir el gráfico existente si existe
-    if (chartInstances[canvasId]) {
-        console.log('Destroying existing chart: ' + canvasId);
-        chartInstances[canvasId].destroy();
-        chartInstances[canvasId] = null;
-    }
-    
-    const ctx = canvas.getContext('2d');
-    
-    // Obtener el valor del gauge del elemento hermano con clase gauge-value
-    const valueElement = canvas.parentElement.querySelector('.gauge-value');
-    const percentage = valueElement ? parseFloat(valueElement.textContent) : 0;
-    
-    // Crear gradiente
-    const gradientColors = ctx.createLinearGradient(0, 0, 0, 150);
-    gradientColors.addColorStop(0, color1);
-    gradientColors.addColorStop(1, color2);
-    
-    // Configurar y crear el gráfico
-    chartInstances[canvasId] = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            datasets: [{
-                data: [percentage, 100 - percentage],
-                backgroundColor: [
-                    gradientColors,
-                    '#1a1e2c' // Color de fondo oscuro
-                ],
-                borderWidth: 0,
-                cutout: '75%'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: {
-                animateRotate: true,
-                animateScale: true,
-                duration: 1500,
-                easing: 'easeOutCubic'
-            },
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    enabled: false
-                }
-            }
-        }
-    });
-}
-
 // Función para inicializar el gráfico de barras de métricas de tiempo
 function initTimeMetricsChart() {
     console.log('Initializing time metrics chart');
@@ -218,10 +156,10 @@ function initHourlyChart() {
     
     const ctx = canvas.getContext('2d');
     
-    // Datos de muestra (serán reemplazados por datos reales)
+    // Usar arrays vacíos en lugar de datos de muestra
     const data = {
-        labels: ['4AM', '5AM', '6AM', '7AM', '8AM', '9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM', '6PM', '7PM', '8PM', '9PM', '10PM'],
-        values: [2, 3, 5, 8, 10, 9, 7, 8, 10, 9, 7, 8, 9, 6, 5, 4, 3, 2, 1]
+        labels: [],
+        values: []
     };
     
     // Crear gradiente
@@ -309,9 +247,19 @@ function updateHourlyChart(labels, values) {
     
     const chart = chartInstances['hourlyChats'];
     if (chart) {
+        // Si no hay datos, mostrar un gráfico vacío
+        if (!labels.length || !values.length) {
+            chart.data.labels = [];
+            chart.data.datasets[0].data = [];
+            chart.update();
+            console.log('Chart updated with empty data');
+            return;
+        }
+        
         chart.data.labels = labels;
         chart.data.datasets[0].data = values;
         chart.update();
+        console.log('Chart updated with data:', {labels, values});
     }
 }
 
@@ -365,163 +313,40 @@ function fetchDashboardMetrics() {
         });
 }
 
-// Función para generar datos de conversaciones por hora
-function updateHourlyConversationsChart(data) {
-    // Verificar si hay datos de debug con messages_by_chat
-    if (data.debug && data.debug.messages_by_chat) {
-        console.log('Actualizando gráfico de conversaciones por hora');
-        
-        // Convertir los datos de messages_by_chat en formato para el gráfico
-        const hourlyData = generateHourlyData(data.debug.messages_by_chat);
-        
-        // Actualizar el gráfico
-        updateHourlyChart(hourlyData.labels, hourlyData.values);
-    } else {
-        console.log('No hay datos de conversaciones por hora disponibles');
-    }
-}
-
-// Función para generar datos por hora a partir de messages_by_chat
-function generateHourlyData(messagesByChat) {
-    // Datos predefinidos (usar si messages_by_chat no tiene el formato esperado)
-    const defaultLabels = ['4AM', '6AM', '8AM', '10AM', '12PM', '2PM', '4PM', '6PM', '8PM', '10PM'];
-    const defaultValues = [2, 5, 8, 10, 9, 7, 9, 6, 3, 1];
-    
-    // Intentar generar datos más realistas
-    try {
-        // Si messagesByChat es un objeto con IDs de chat y conteos de mensajes
-        if (typeof messagesByChat === 'object' && Object.keys(messagesByChat).length > 0) {
-            // Simplemente usar los valores como están, ya que parecen ser conteos de mensajes
-            const chatIds = Object.keys(messagesByChat);
-            const messageCounts = Object.values(messagesByChat);
-            
-            // Crear etiquetas basadas en el número de valores (distribuyendo a lo largo del día)
-            const labels = chatIds.map((_, index) => {
-                const hour = 4 + Math.floor((index / chatIds.length) * 18); // Distribuir entre 4AM y 10PM
-                return hour <= 12 ? `${hour}AM` : `${hour - 12}PM`;
-            });
-            
-            return {
-                labels: labels,
-                values: messageCounts
-            };
-        }
-    } catch (error) {
-        console.error('Error al procesar datos de conversaciones por hora:', error);
-    }
-    
-    // Retornar datos predeterminados si algo salió mal
-    return {
-        labels: defaultLabels,
-        values: defaultValues
-    };
-}
-
-// Función para actualizar la tabla de métricas de rendimiento
-function updatePerformanceTable(goalCount, goalTotal, abandonedCount, totalConversations, abandonmentRate) {
-    console.log('Actualizando tabla de rendimiento:', {
-        goalCount, goalTotal, abandonedCount, totalConversations, abandonmentRate
-    });
-    
-    // Calcular porcentaje de objetivos alcanzados
-    const goalPercentage = goalTotal > 0 ? (goalCount / goalTotal) * 100 : 0;
-    
-    // Actualizar fila de objetivos alcanzados
-    const goalRow = document.querySelector('.performance-table tbody tr:first-child');
-    if (goalRow) {
-        // Actualizar cantidad
-        const goalCountCell = goalRow.querySelector('td:nth-child(2)');
-        if (goalCountCell) {
-            goalCountCell.textContent = `${goalCount}/${goalTotal}`;
-        }
-        
-        // Actualizar barra de progreso y porcentaje
-        const progressBar = goalRow.querySelector('.progress-bar');
-        const percentageSpan = goalRow.querySelector('.progress-container span');
-        
-        if (progressBar) {
-            progressBar.style.width = `${goalPercentage}%`;
-        }
-        
-        if (percentageSpan) {
-            percentageSpan.textContent = `${goalPercentage.toFixed(2)}%`;
-        }
-    }
-    
-    // Actualizar fila de conversaciones abandonadas
-    const abandonedRow = document.querySelector('.performance-table tbody tr:nth-child(2)');
-    if (abandonedRow) {
-        // Actualizar cantidad
-        const abandonedCountCell = abandonedRow.querySelector('td:nth-child(2)');
-        if (abandonedCountCell) {
-            abandonedCountCell.textContent = `${abandonedCount}/${totalConversations}`;
-        }
-        
-        // Actualizar barra de progreso y porcentaje
-        const progressBar = abandonedRow.querySelector('.progress-bar');
-        const percentageSpan = abandonedRow.querySelector('.progress-container span');
-        
-        if (progressBar) {
-            progressBar.style.width = `${abandonmentRate}%`;
-        }
-        
-        if (percentageSpan) {
-            percentageSpan.textContent = `${abandonmentRate.toFixed(2)}%`;
-        }
-    }
-}
-// Función específica para actualizar las estadísticas de conversaciones
+// Función para actualizar las estadísticas de conversaciones
 function updateConversationStats(received, attended) {
-    console.log('Actualizando estadísticas de conversaciones:', received, attended);
-    
-    // Obtener todos los elementos stat-box
+    // Método 1: Buscar por los elementos stat-box y actualizar según el título
     const statBoxes = document.querySelectorAll('.stat-box');
-    console.log('Elementos stat-box encontrados:', statBoxes.length);
     
-    // Iterar sobre cada stat-box
     statBoxes.forEach(box => {
         const title = box.querySelector('h3');
         const value = box.querySelector('.stat-value');
         
         if (title && value) {
             const titleText = title.textContent.trim();
-            console.log('Encontrado título:', titleText);
             
             if (titleText === 'Recibidas') {
-                console.log('Actualizando valor Recibidas a:', received);
                 value.textContent = received;
             } else if (titleText === 'Atendidas') {
-                console.log('Actualizando valor Atendidas a:', attended);
                 value.textContent = attended;
             }
-        } else {
-            console.warn('No se encontró título o valor en un stat-box');
         }
     });
     
-    // Enfoque alternativo: buscar directamente por el texto
-    const statValues = document.querySelectorAll('.stat-value');
-    console.log('Total de elementos stat-value encontrados:', statValues.length);
-    
-    // Buscar también directamente por el texto y la proximidad
-    document.querySelectorAll('h3').forEach(h3 => {
-        const text = h3.textContent.trim();
-        if (text === 'Recibidas') {
-            const parent = h3.parentElement;
-            const valueElement = parent.querySelector('.stat-value');
-            if (valueElement) {
-                console.log('Actualizando Recibidas (alternativo) a:', received);
-                valueElement.textContent = received;
+    // Método 2 (alternativo): Si el método 1 falla por algún motivo, 
+    // buscar directamente por el encabezado y actualizar el valor asociado
+    if (!statBoxes.length) {
+        document.querySelectorAll('h3').forEach(h3 => {
+            const text = h3.textContent.trim();
+            if (text === 'Recibidas' || text === 'Atendidas') {
+                const parent = h3.parentElement;
+                const valueElement = parent.querySelector('.stat-value');
+                if (valueElement) {
+                    valueElement.textContent = text === 'Recibidas' ? received : attended;
+                }
             }
-        } else if (text === 'Atendidas') {
-            const parent = h3.parentElement;
-            const valueElement = parent.querySelector('.stat-value');
-            if (valueElement) {
-                console.log('Actualizando Atendidas (alternativo) a:', attended);
-                valueElement.textContent = attended;
-            }
-        }
-    });
+        });
+    }
 }
 
 function updateGaugeValue(canvasId, value) {

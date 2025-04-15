@@ -135,6 +135,10 @@ function obtener_estadisticas_chat($start_date = null, $end_date = null, $group_
         echo 'Error HTTP: ' . $httpCode . ' Respuesta: ' . $response;
         return null;
     }
+    // Agregar depuración para ver formato exacto de respuesta
+    error_log('Datos recibidos de API: ' . json_encode($data));
+    
+    return $data;
 }
 
 
@@ -145,23 +149,33 @@ function procesar_datos_grafico_horas($datos) {
     $labels = [];
     $values = [];
 
-    // Acceder al array de estadísticas
-    if (!isset($datos['statistics'])) {
-        echo "Error: No se encontraron estadísticas.";
+    // Si los datos están vacíos, devolver arrays vacíos
+    if (empty($datos) || !is_array($datos)) {
+        error_log("Datos vacíos o inválidos en procesar_datos_grafico_horas()");
         return ['labels' => [], 'values' => []];
     }
-
-    foreach ($datos['statistics'] as $item) {
-        if (!isset($item['period']) || !isset($item['total_chats'])) {
-            echo "Error: El item no tiene los índices \"period\" o \"total_chats\".";
-            continue;
+    
+    // Verificar si hay estadísticas
+    if (isset($datos['statistics']) && is_array($datos['statistics'])) {
+        foreach ($datos['statistics'] as $item) {
+            if (isset($item['period']) && isset($item['total_chats'])) {
+                // Extraer solo la hora del timestamp
+                $hora = date('H:i', strtotime($item['period']));
+                $labels[] = $hora;
+                $values[] = (int)$item['total_chats'];
+            }
         }
-
-        // Extraer solo la hora del campo 'period'
-        $hora = date('H:i', strtotime($item['period']));
-
-        $labels[] = $hora;
-        $values[] = $item['total_chats'];
+    } else {
+        error_log("No se encontraron estadísticas en el formato esperado: " . json_encode(array_keys($datos)));
+    }
+    
+    // Si no hay datos, crear un array de 24 horas con valores en 0
+    if (empty($labels)) {
+        for ($hour = 0; $hour < 24; $hour++) {
+            $formattedHour = sprintf("%d:00", $hour);
+            $labels[] = $formattedHour;
+            $values[] = 0;
+        }
     }
     
     return [
@@ -347,7 +361,6 @@ function actualizar_configuracion_dashboard($config = []) {
     $token = $_SESSION['token'];
 
     if (empty($token)) {
-        echo "❌ Token vacío. No se puede continuar.";
         return ['error' => true, 'message' => 'Token vacío'];
     }
 
@@ -358,10 +371,6 @@ function actualizar_configuracion_dashboard($config = []) {
 
     $payload = json_encode($config);
 
-    // Mostrar lo que se enviará
-    echo "📤 Enviando configuración:\n" . print_r($config, true);
-    echo "🔐 Token:\n$token\n";
-    echo "📦 JSON Payload:\n$payload\n";
 
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
@@ -373,12 +382,7 @@ function actualizar_configuracion_dashboard($config = []) {
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-    // Mostrar la respuesta y código HTTP
-    echo "📨 Respuesta del servidor:\n$response\n";
-    echo "📡 Código HTTP:\n$httpCode\n";
-
     if (curl_errno($ch)) {
-        echo "❌ Error de conexión: " . curl_error($ch);
         curl_close($ch);
         return ['error' => true, 'message' => 'Error de conexión'];
     }
@@ -386,17 +390,13 @@ function actualizar_configuracion_dashboard($config = []) {
     curl_close($ch);
 
     if ($httpCode !== 200) {
-        echo "⚠️ Error del servidor: Código $httpCode";
         return ['error' => true, 'message' => 'Error del servidor: ' . $httpCode];
     }
 
     $data = json_decode($response, true);
     if (json_last_error() !== JSON_ERROR_NONE) {
-        echo "❌ Error al decodificar JSON: " . json_last_error_msg();
         return ['error' => true, 'message' => 'Respuesta inválida'];
     }
-
-    echo "<h4>✅ Datos decodificados:</h4><pre>" . print_r($data, true) . "</pre>";
 
     return $data;
 }
@@ -412,7 +412,7 @@ function obtener_metricas_dashboard($date = null) {
     }
 
     if ($date === null) {
-        $date = date('Y-m-d');
+        $date = date('Y-m-d'); // Fecha actual
     }
 
     $url = "https://chatdev.tpsalud.com:6999/dashboard_metrics?date=$date";
@@ -463,11 +463,7 @@ function obtener_metricas_dashboard($date = null) {
             echo $msg;
             error_log($msg);
             return null;
-        }
-
-        // Mostrar y registrar los datos recibidos
-        echo '<pre>' . print_r($data, true) . '</pre>';
-        error_log('Datos recibidos: ' . print_r($data, true));
+        };
 
         return $data;
     } else {

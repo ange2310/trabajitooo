@@ -31,21 +31,21 @@ try {
     
     // Asegurarse de que todas las claves necesarias estén presentes
     $metricas = [
-        'atencion' => $metricas_datos['attention_rate'] ?? 85.7,
-        'oportunidad' => $metricas_datos['opportunity_rate'] ?? 92.3,
-        'abandono' => $metricas_datos['abandonment_rate'] ?? 7.8,
-        'tiempo_espera' => $metricas_datos['average_wait_time'] ?? 2.5,
-        'tiempo_respuesta' => $metricas_datos['average_response_time'] ?? 1.2,
-        'duracion_conversacion' => $metricas_datos['average_conversation_duration'] ?? 8.7,
-        'conversaciones_recibidas' => $metricas_datos['total_conversations'] ?? 345,
-        'conversaciones_atendidas' => $metricas_datos['attended_conversations'] ?? 296,
+        'atencion' => $metricas_datos['attention_rate'] ?? 0,
+        'oportunidad' => $metricas_datos['opportunity_rate'] ?? 0,
+        'abandono' => $metricas_datos['abandonment_rate'] ?? 0,
+        'tiempo_espera' => $metricas_datos['average_wait_time'] ?? 0,
+        'tiempo_respuesta' => $metricas_datos['average_response_time'] ?? 0,
+        'duracion_conversacion' => $metricas_datos['average_conversation_duration'] ?? 0,
+        'conversaciones_recibidas' => $metricas_datos['total_conversations'] ?? 0,
+        'conversaciones_atendidas' => $metricas_datos['attended_conversations'] ?? 0,
         'objetivos_cantidad' => isset($metricas_datos['goals_achieved']) && isset($metricas_datos['total_goals']) ? 
-            $metricas_datos['goals_achieved'] . '/' . $metricas_datos['total_goals'] : '42/50',
+            $metricas_datos['goals_achieved'] . '/' . $metricas_datos['total_goals'] : '0/0',
         'objetivos_porcentaje' => isset($metricas_datos['goals_achieved']) && isset($metricas_datos['total_goals']) && $metricas_datos['total_goals'] > 0 ? 
-            ($metricas_datos['goals_achieved'] / $metricas_datos['total_goals'] * 100) : 84,
+            ($metricas_datos['goals_achieved'] / $metricas_datos['total_goals'] * 100) : 0,
         'abandonadas_cantidad' => isset($metricas_datos['abandoned_conversations']) && isset($metricas_datos['total_conversations']) ? 
-            $metricas_datos['abandoned_conversations'] . '/' . $metricas_datos['total_conversations'] : '27/345',
-        'total_chats' => $metricas_datos['total_conversations'] ?? 345
+            $metricas_datos['abandoned_conversations'] . '/' . $metricas_datos['total_conversations'] : '0/0',
+        'total_chats' => $metricas_datos['total_conversations'] ?? 0
     ];
     
     $config_dashboard = obtener_configuracion_dashboard();
@@ -54,6 +54,12 @@ try {
     // Procesar datos para usar en los gráficos
     $metricas = procesar_metricas($metricas);
     $datos_grafico = procesar_datos_grafico_horas($conversaciones_por_hora);
+
+    // NUEVA LÍNEA: Verificar si tenemos datos reales para las conversaciones por hora
+    if (empty($datos_grafico['labels'])) {
+        // Registrar error si no hay datos
+        error_log("No se obtuvieron datos para el gráfico de conversaciones por hora");
+    }
 } catch (Exception $e) {
     // Si hay un error con la API, mostrar mensaje
     $error_api = "Error al conectar con la API: " . $e->getMessage();
@@ -229,15 +235,30 @@ document.addEventListener('DOMContentLoaded', function() {
         values: <?php echo json_encode($datos_grafico['values'] ?? []); ?>
     };
     
-    // No intentamos inicializar los gráficos aquí, ya que se hacen en charts.js
+    console.log('Datos para gráfico de horas:', hourlyData);
     
-    // Actualizar gráfico de conversaciones por hora con datos dinámicos
-    // Solo si el gráfico ya está inicializado
-    if (document.getElementById('hourlyChats') && hourlyData.labels.length > 0) {
+    // Verificar si hay datos para graficar
+    if (hourlyData.labels.length > 0 && hourlyData.values.length > 0) {
+        console.log('Hay datos para actualizar el gráfico');
+        
         // Esperamos 800ms para asegurar que el gráfico ya está inicializado
         setTimeout(function() {
             if (typeof updateHourlyChart === 'function') {
                 updateHourlyChart(hourlyData.labels, hourlyData.values);
+                console.log('Gráfico actualizado con datos reales');
+            } else {
+                console.error('Función updateHourlyChart no está disponible');
+            }
+        }, 800);
+    } else {
+        console.log('No hay datos para mostrar en el gráfico');
+        
+        // Para una fecha sin datos, forzar un gráfico vacío
+        setTimeout(function() {
+            if (typeof updateHourlyChart === 'function') {
+                // Actualizar con arrays vacíos para mostrar un gráfico sin datos
+                updateHourlyChart([], []);
+                console.log('Gráfico actualizado con arrays vacíos');
             }
         }, 800);
     }
@@ -247,6 +268,3 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="assets/js/charts.js"></script>
 <script src="assets/js/dashboard.js"></script>
-
-<!-- Incluir el footer -->
-<?php include_once 'includes/footer.php'; ?>

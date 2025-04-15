@@ -4,8 +4,8 @@ session_start();
 
 // Incluir archivos necesarios
 require_once 'includes/conexion_api.php';
-require_once 'includes/procesador_datos.php';
 require_once 'config/config.php';
+require_once 'includes/get_metrics.php'; // Eliminando la referencia a procesador_datos.php
 
 // Verificar si el usuario está logueado
 if (!isset($_SESSION['token']) || empty($_SESSION['token'])) {
@@ -19,12 +19,8 @@ $fin = isset($_GET['fin']) ? $_GET['fin'] : date('Y-m-t');
 $agent_email = isset($_GET['agent']) ? $_GET['agent'] : null;
 
 // Obtener datos de rendimiento de agentes
-$rendimiento_agentes = obtener_rendimiento_agente($inicio, $fin, $agent_email);
-/*
-echo '<pre>';
-print_r($rendimiento_agentes);
-echo '</pre>';
-*/
+$rendimiento_agentes = obtener_rendimiento_agente($inicio, $fin, null, $agent_email);
+
 // Debug: Ver la estructura de datos real
 if (!empty($rendimiento_agentes) && isset($rendimiento_agentes[0])) {
     error_log('Estructura de datos del primer agente: ' . print_r($rendimiento_agentes[0], true));
@@ -106,8 +102,8 @@ include_once 'includes/header.php';
                                         <td><?php echo $agente['chats_attended'] ?? 0; ?></td>
                                         <td>
                                             <?php 
-                                                $tasa = ($agente['chats_received'] > 0) 
-                                                    ? ($agente['chats_attended'] / $agente['chats_received']) * 100 
+                                                $tasa = (isset($agente['chats_received']) && $agente['chats_received'] > 0) 
+                                                    ? (($agente['chats_attended'] ?? 0) / $agente['chats_received']) * 100 
                                                     : 0;
                                                 echo number_format($tasa, 2) . '%';
                                             ?>
@@ -144,8 +140,14 @@ include_once 'includes/header.php';
                 <h2>Estadísticas por Periodo</h2>
                 
                 <?php
-                    // Obtener estadísticas por día
-                    $estadisticas = obtener_estadisticas_chat($inicio, $fin, 'day');
+                // Obtener estadísticas por día
+                $estadisticas_diarias = obtener_estadisticas_chat($inicio, $fin, 'day');
+                
+                // Preparar datos para la tabla
+                $estadisticas = [];
+                if (isset($estadisticas_diarias['statistics']) && is_array($estadisticas_diarias['statistics'])) {
+                    $estadisticas = $estadisticas_diarias['statistics'];
+                }
                 ?>
                 
                 <?php if (empty($estadisticas)): ?>
@@ -169,14 +171,15 @@ include_once 'includes/header.php';
                             <tbody>
                                 <?php foreach ($estadisticas as $dia): ?>
                                     <tr>
-                                        <td><?php echo date('d/m/Y', strtotime($dia['date'])); ?></td>
-                                        <td><?php echo $dia['total_conversations'] ?? 0; ?></td>
-                                        <td><?php echo $dia['attended_conversations'] ?? 0; ?></td>
-                                        <td><?php echo $dia['abandoned_conversations'] ?? 0; ?></td>
+                                        <td><?php echo date('d/m/Y', strtotime($dia['period'] ?? date('Y-m-d'))); ?></td>
+                                        <td><?php echo $dia['total_chats'] ?? 0; ?></td>
+                                        <td><?php echo $dia['attended_chats'] ?? 0; ?></td>
+                                        <td><?php echo $dia['abandoned_chats'] ?? 0; ?></td>
                                         <td>
                                             <?php 
-                                                $tasa = ($dia['total_conversations'] > 0) 
-                                                    ? ($dia['attended_conversations'] / $dia['total_conversations']) * 100 
+                                                $total = $dia['total_chats'] ?? 0;
+                                                $tasa = ($total > 0) 
+                                                    ? (($dia['attended_chats'] ?? 0) / $total) * 100 
                                                     : 0;
                                                 echo number_format($tasa, 2) . '%';
                                             ?>
@@ -193,5 +196,3 @@ include_once 'includes/header.php';
     </div>
 </div>
 <script src="assets/js/dashboard.js"></script>
-<!-- Incluir el footer -->
-<?php include_once 'includes/footer.php'; ?>

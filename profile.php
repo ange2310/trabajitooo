@@ -256,5 +256,3 @@ include_once 'includes/header.php';
 </style>
 
 <script src="assets/js/dashboard.js"></script>
-<!-- Incluir el footer -->
-<?php include_once 'includes/footer.php'; ?>
