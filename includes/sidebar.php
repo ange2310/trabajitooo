@@ -20,6 +20,26 @@
                     <span>Tables</span>
                 </a>
             </li>
+            <!-- Nuevos iconos para gauges -->
+            <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'metrica_atencion.php' ? 'active' : ''; ?>">
+                <a href="metrica_atencion.php">
+                    <i class="fas fa-headset"></i>
+                    <span>Tasa de Atención</span>
+                </a>
+            </li>
+            <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'metrica_oportunidad.php' ? 'active' : ''; ?>">
+                <a href="metrica_oportunidad.php">
+                    <i class="fas fa-clock"></i>
+                    <span>Tasa de Oportunidad</span>
+                </a>
+            </li>
+            <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'metrica_abandono.php' ? 'active' : ''; ?>">
+                <a href="metrica_abandono.php">
+                    <i class="fas fa-user-slash"></i>
+                    <span>Tasa de Abandono</span>
+                </a>
+            </li>
+        </ul>
         
         <!-- Separador -->
         <div class="sidebar-divider">

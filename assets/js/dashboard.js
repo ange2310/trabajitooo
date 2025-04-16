@@ -1,7 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Dashboard.js: DOM Content Loaded');
     
-    /* ===== Manejo del Toggle del Sidebar ===== */
     const sidebar = document.querySelector('.sidebar');
     const contentWrapper = document.querySelector('.content-wrapper');
     const toggleSidebar = document.getElementById('toggle-sidebar');
@@ -13,14 +11,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const isCollapsed = cookieCollapsed.split('=')[1] === 'true';
         if (isCollapsed) {
             sidebar.classList.add('collapsed');
-            contentWrapper.classList.add('expanded');
+            contentWrapper.classList.add('full-width');
         }
     }
     
     // Función para alternar el estado del sidebar
     function toggleSidebarState() {
         sidebar.classList.toggle('collapsed');
-        contentWrapper.classList.toggle('expanded');
+        contentWrapper.classList.toggle('full-width');
         
         // Guardar estado en cookie
         const isCollapsed = sidebar.classList.contains('collapsed');

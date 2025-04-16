@@ -114,7 +114,6 @@ function obtener_estadisticas_chat($start_date = null, $end_date = null, $group_
     }
 
     if (!isset($_SESSION['token'])) {
-        error_log('Error: No hay token para obtener_estadisticas_chat');
         header('location: login.php'); // Redirigir a la página de inicio de sesión si no hay token
         exit;
     }
