@@ -55,11 +55,11 @@ try {
     ];
     
     $config_dashboard = obtener_configuracion_dashboard();
-    $conversaciones_por_hora = obtener_estadisticas_chat($inicio_mes, $fin_mes, 'hour');
+    //$conversaciones_por_hora = obtener_estadisticas_chat($fecha, 'hour');
     
     // Procesar datos para usar en los gráficos
     $metricas = procesar_metricas($metricas);
-    $datos_grafico = procesar_datos_grafico_horas($conversaciones_por_hora);
+    //$datos_grafico = procesar_datos_grafico_horas($conversaciones_por_hora);
 } catch (Exception $e) {
     // Si hay un error con la API, mostrar mensaje
     $error_api = "Error al conectar con la API: " . $e->getMessage();
@@ -229,32 +229,18 @@ include_once 'includes/header.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-
-    // Datos para el gráfico de conversaciones por hora
-    var hourlyData = {
-        labels: <?php echo json_encode($datos_grafico['labels'] ?? []); ?>,
-        values: <?php echo json_encode($datos_grafico['values'] ?? []); ?>
-    };
+    // Fecha seleccionada
+    const fecha = "<?php echo $fecha; ?>";
+    console.log("Fecha seleccionada en PHP:", fecha);
+    console.log("URL actual:", window.location.href);
     
-    
-    // Verificar si hay datos para graficar
-    const fecha = document.getElementById('fecha')?.value || "<?php echo $fecha; ?>";
-
-    setTimeout(function() {
-        // Si hay datos y la función está disponible, actualizar el gráfico
-        if (typeof updateHourlyChart === 'function') {
-            // Al cambiar de fecha, siempre limpiar y volver a crear el gráfico
-            // Pasando los datos según si hay contenido o no
-            if (hourlyData.labels.length > 0 && hourlyData.values.length > 0) {
-                updateHourlyChart(hourlyData.labels, hourlyData.values);
-            } else {
-                // Pasar arrays vacíos para forzar la creación de un gráfico vacío
-                updateHourlyChart([], []);
-            }
-        } else {
-            console.error('Función updateHourlyChart no está disponible');
-        }
-    }, 800);
+    // Cargar datos para el gráfico
+    if (typeof cargarDatosPorHora === 'function') {
+        // Dar tiempo para que se carguen todas las dependencias
+        setTimeout(cargarDatosPorHora, 500);
+    } else {
+        console.error('ADVERTENCIA: cargarDatosPorHora no está disponible');
+    }
 });
 </script>
 

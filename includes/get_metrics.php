@@ -30,52 +30,31 @@ if (isset($_GET['action'])) {
                 echo json_encode(['error' => $e->getMessage()]);
             }
             break;
-        case 'hourly_stats':
-            $start_date = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-01');
-            $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-t');
-            
-            try {
-                $datos = obtener_estadisticas_chat($start_date, $end_date, 'hour');
-                $datos_procesados = procesar_datos_grafico_horas($datos);
-                
-                echo json_encode($datos_procesados);
-            } catch (Exception $e) {
-                echo json_encode(['error' => $e->getMessage()]);
-            }
-            break;
-
-        default:
-            echo json_encode(['error' => 'Acción no válida']);
-            break;
     }
 
     exit; // Detener ejecución si es una acción
 }
 
-/*Procesa las estadísticas de chat para garantizar formato correcto de tiempos promedios y otros valores*/
+/* Procesa las estadísticas de chat para garantizar formato correcto de tiempos promedios y otros valores */
 function procesar_estadisticas_chat($estadisticas) {
-
     if (empty($estadisticas) || !is_array($estadisticas)) {
         return [];
     }
-    
+
     $resultado = [];
-    
+
     // Verificar si hay una propiedad 'statistics' y usarla si existe
-    if (isset($estadisticas['statistics']) && is_array($estadisticas['statistics'])) {
-        $datos_estadisticas = $estadisticas['statistics'];
-    } else {
-        $datos_estadisticas = $estadisticas;
-    }
-    
+    $datos_estadisticas = isset($estadisticas['statistics']) && is_array($estadisticas['statistics'])
+        ? $estadisticas['statistics']
+        : $estadisticas;
+
     foreach ($datos_estadisticas as $stat) {
-        
         $stat['period'] = $stat['period'] ?? date('Y-m-d');
         $stat['total_chats'] = isset($stat['total_chats']) ? intval($stat['total_chats']) : 0;
         $stat['attended_chats'] = isset($stat['attended_chats']) ? intval($stat['attended_chats']) : 0; 
         $stat['abandoned_chats'] = isset($stat['abandoned_chats']) ? intval($stat['abandoned_chats']) : 0;
-    
-        // Buscar en múltiples posibles nombres de campo
+
+        // Buscar en múltiples posibles nombres de campo para el tiempo de conversación
         if (isset($stat['avg_conversation_time']) && $stat['avg_conversation_time'] !== null) {
             $stat['avg_conversation_time'] = floatval($stat['avg_conversation_time']);
         } else if (isset($stat['average_conversation_time']) && $stat['average_conversation_time'] !== null) {
@@ -93,42 +72,54 @@ function procesar_estadisticas_chat($estadisticas) {
                     min($stat['total_chats'] / 2, 10) : 5; 
             $stat['avg_conversation_time'] = $base_time + (rand(0, 100) / 100) * $factor;
         }
-        
+
         // Registrar los datos procesados para depuración
         error_log('Estadística procesada - period: ' . $stat['period'] . 
                  ', total_chats: ' . $stat['total_chats'] . 
                  ', attended_chats: ' . $stat['attended_chats'] . 
                  ', abandoned_chats: ' . $stat['abandoned_chats'] . 
                  ', avg_conversation_time: ' . $stat['avg_conversation_time']);
-        
+
         $resultado[] = $stat;
     }
-    
+
     return $resultado;
 }
 
 /*Obtiene estadísticas de chat por periodo*/
-function obtener_estadisticas_chat($start_date = null, $end_date = null, $group_by = 'day') {
+function obtener_estadisticas_chat($start_date = null, $end_date = null, $group_by = null) {
+    // Modificarlo para que acepte el grupo de manera correcta
+    // Si solo hay dos parámetros, el segundo es group_by (no end_date)
+    if ($end_date !== null && $group_by === null && in_array($end_date, ['hour', 'day', 'week', 'month'])) {
+        $group_by = $end_date;
+        $end_date = $start_date; // Para una sola fecha, start_date y end_date son iguales
+    }
+    
+    // El resto de la función permanece igual
     if (session_status() === PHP_SESSION_NONE) {
-        session_start(); // Solo iniciar la sesión si no está activa
+        session_start();
     }
 
     if (!isset($_SESSION['token'])) {
-        header('location: login.php'); // Redirigir a la página de inicio de sesión si no hay token
+        header('location: login.php');
         exit;
     }
 
     // Valores por defecto si no se proporcionan fechas
     if ($start_date === null) {
-        $start_date = date('Y-m-d', strtotime('-7 days')); // 7 días atrás
+        $start_date = date('Y-m-d', strtotime('-7 days'));
     }
     if ($end_date === null) {
-        $end_date = date('Y-m-d'); //Fecha actual
+        $end_date = date('Y-m-d');
     }
 
-    // URL DE LA API CON DATOS OPCIONALES
-    $url = "https://chatdev.tpsalud.com:6999/chat_statistics?start_date=$start_date&end_date=$end_date&group_by=$group_by";
-
+    // URL DE LA API CON DATOS OPCIONALES - Modificar para incluir group_by correctamente
+    $url = "https://chatdev.tpsalud.com:6999/chat_statistics?start_date=$start_date&end_date=$end_date";
+    
+    // Añadir el parámetro group_by solo si está definido
+    if ($group_by !== null) {
+        $url .= "&group_by=$group_by";
+    }
     // Obtener el token de sesión
     $token = $_SESSION['token'];
 
@@ -201,41 +192,114 @@ function obtener_estadisticas_chat($start_date = null, $end_date = null, $group_
     }
 }
 
-
-/*Procesa datos para gráficos*/
+/* Procesa datos para gráficos de conversaciones por hora - Versión mejorada */
 function procesar_datos_grafico_horas($datos) { 
     $labels = [];
     $values = [];
 
+    // Registrar los datos recibidos para análisis
+    error_log("Datos recibidos en procesar_datos_grafico_horas: " . json_encode($datos));
+
     // Si los datos están vacíos, devolver arrays vacíos
     if (empty($datos) || !is_array($datos)) {
         error_log("Datos vacíos o inválidos en procesar_datos_grafico_horas()");
-        return ['labels' => [], 'values' => []];
+        // Inicializar etiquetas y valores vacíos para las 24 horas
+        for ($hour = 0; $hour < 24; $hour++) {
+            $labels[] = sprintf("%02d:00", $hour);
+            $values[] = 0;
+        }
+        return ['labels' => $labels, 'values' => $values];
     }
-    
+
+    // Inicializamos las etiquetas y los valores de las horas (24 horas)
+    $hours_data = array_fill(0, 24, 0); // 0 conversaciones por cada hora del día
+
     // Verificar si hay estadísticas
     if (isset($datos['statistics']) && is_array($datos['statistics'])) {
         foreach ($datos['statistics'] as $item) {
             if (isset($item['period']) && isset($item['total_chats'])) {
-                // Extraer solo la hora del timestamp
-                $hora = date('H:i', strtotime($item['period']));
-                $labels[] = $hora;
-                $values[] = (int)$item['total_chats'];
+                // Intentar extraer la hora con diferentes formatos
+                $hour = null;
+                $periodo = $item['period'];
+                $total_chats = (int)$item['total_chats'];
+                
+                // Registrar para análisis
+                error_log("Procesando item: period={$periodo}, total_chats={$total_chats}");
+                
+                // Formato ISO con T (2025-04-16T01:00:00)
+                if (strpos($periodo, 'T') !== false) {
+                    $timestamp = strtotime($periodo);
+                    if ($timestamp !== false) {
+                        $hour = (int)date('H', $timestamp);
+                    }
+                }
+                // Formato con espacio y : (2025-04-16 01:00:00)
+                else if (strpos($periodo, ' ') !== false && strpos($periodo, ':') !== false) {
+                    $timestamp = strtotime($periodo);
+                    if ($timestamp !== false) {
+                        $hour = (int)date('H', $timestamp);
+                    }
+                }
+                // Formato con espacio sin : (2025-04-16 01)
+                else if (strpos($periodo, ' ') !== false) {
+                    $parts = explode(' ', $periodo);
+                    if (count($parts) >= 2) {
+                        $hour_part = $parts[1];
+                        $hour = (int)$hour_part;
+                    }
+                }
+                // Formato solo hora (01:00)
+                else if (strpos($periodo, ':') !== false) {
+                    $hour_part = explode(':', $periodo)[0];
+                    $hour = (int)$hour_part;
+                }
+                
+                // Si no se pudo extraer la hora de ninguna forma, intentar último recurso
+                if ($hour === null) {
+                    // Intentar extraer cualquier número que pueda ser una hora
+                    preg_match('/(\d{1,2})/', $periodo, $matches);
+                    if (!empty($matches[1])) {
+                        $hour = (int)$matches[1];
+                        // Verificar que sea una hora válida
+                        if ($hour > 23) {
+                            $hour = null;
+                        }
+                    }
+                }
+
+                // Asegurarse de que la hora esté en el rango de 0 a 23
+                if ($hour !== null && $hour >= 0 && $hour < 24) {
+                    $hours_data[$hour] = $total_chats; // Actualizar el número de conversaciones para esa hora
+                    error_log("Hora extraída: {$hour}, total_chats: {$total_chats}");
+                } else {
+                    error_log("No se pudo extraer una hora válida de '{$periodo}'");
+                }
             }
         }
     } else {
         error_log("No se encontraron estadísticas en el formato esperado: " . json_encode(array_keys($datos)));
     }
-    
-    // Si no hay datos, crear un array de 24 horas con valores en 0
-    if (empty($labels)) {
-        for ($hour = 0; $hour < 24; $hour++) {
-            $formattedHour = sprintf("%d:00", $hour);
-            $labels[] = $formattedHour;
-            $values[] = 0;
+
+    // Ahora llenamos las etiquetas y valores para todas las horas del día
+    for ($hour = 0; $hour < 24; $hour++) {
+        $formattedHour = sprintf("%02d:00", $hour);
+        $labels[] = $formattedHour;
+        $values[] = $hours_data[$hour];
+    }
+
+    // Verificar si hay al menos un valor diferente de cero
+    $has_data = false;
+    foreach ($values as $value) {
+        if ($value > 0) {
+            $has_data = true;
+            break;
         }
     }
-    
+
+    // Registrar el resultado final
+    error_log("Datos procesados: has_data=" . ($has_data ? "true" : "false") . 
+              ", values=" . json_encode($values));
+
     return [
         'labels' => $labels,
         'values' => $values

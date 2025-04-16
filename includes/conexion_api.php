@@ -1,5 +1,46 @@
 <?php
 
+require_once(__DIR__ . '/../config/config.php');
+require_once(__DIR__ . '/../includes/get_metrics.php');
+
+if (isset($_GET['action'])) {
+    header('Content-Type: application/json');
+
+    switch ($_GET['action']) {
+        case 'hourly_stats':
+            // Obtener fecha desde el parámetro GET
+            $fecha = isset($_GET['fecha']) ? $_GET['fecha'] : date('Y-m-d');
+            
+            error_log("hourly_stats: Procesando solicitud para fecha {$fecha}");
+            
+            try {
+                // Obtener datos de la API con la fecha correcta
+                // Pasar la misma fecha como start_date y end_date, y 'hour' como group_by
+                $datos = obtener_estadisticas_chat($fecha, $fecha, 'hour');
+                
+                // Procesar datos y devolver respuesta
+                $datos_procesados = procesar_datos_grafico_horas($datos);
+                error_log("hourly_stats: Datos procesados para fecha {$fecha}: " . json_encode($datos_procesados));
+                
+                echo json_encode($datos_procesados);
+            } catch (Exception $e) {
+                error_log("Error en hourly_stats: " . $e->getMessage());
+                echo json_encode([
+                    'error' => $e->getMessage(),
+                    'labels' => array_map(function($h) { return sprintf("%02d:00", $h); }, range(0, 23)),
+                    'values' => array_fill(0, 24, 0)
+                ]);
+            }
+            break;
+        
+        default:
+            echo json_encode(['error' => 'Acción no válida']);
+            break;
+    }
+    
+    exit;
+}
+
 function getMetricsFromAPI() {
     global $config;
     

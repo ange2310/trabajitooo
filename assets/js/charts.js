@@ -159,20 +159,23 @@ function initTimeMetricsChart() {
     });
 }
 
-// Función para cargar datos por hora (mejorada)
+// Función específica para cargar el gráfico de conversaciones por hora
+// Función específica para cargar el gráfico de conversaciones por hora
 function cargarDatosPorHora() {
+    // Obtener la fecha seleccionada de la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const fechaURL = urlParams.get('fecha');
     
-    const fecha = document.getElementById('fecha')?.value || new Date().toISOString().split('T')[0];
+    // Si no hay fecha en la URL, usar la fecha actual
+    const fecha = fechaURL || new Date().toISOString().split('T')[0];
     
-    // Calcular inicio y fin de mes para la fecha seleccionada
-    const fechaObj = new Date(fecha);
-    const inicioMes = new Date(fechaObj.getFullYear(), fechaObj.getMonth(), 1);
-    const finMes = new Date(fechaObj.getFullYear(), fechaObj.getMonth() + 1, 0);
+    console.log('Solicitando datos para fecha:', fecha);
     
-    const inicioFormatted = inicioMes.toISOString().split('T')[0];
-    const finFormatted = finMes.toISOString().split('T')[0];
+    // Generar timestamp para evitar caché
+    const timestamp = new Date().getTime();
     
-    fetch(`includes/get_metrics.php?action=hourly_stats&start_date=${inicioFormatted}&end_date=${finFormatted}`)
+    // Aquí está el cambio importante: pasar la fecha correctamente
+    fetch(`includes/conexion_api.php?action=hourly_stats&fecha=${fecha}&t=${timestamp}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`Error HTTP: ${response.status}`);
@@ -180,142 +183,39 @@ function cargarDatosPorHora() {
             return response.json();
         })
         .then(data => {
+            console.log('Datos recibidos para gráfico:', data);
+            
             if (data && data.labels && data.values) {
-                if (typeof updateHourlyChart === 'function') {
-                    updateHourlyChart(data.labels, data.values);
-                }
+                const hasData = data.values.some(v => v > 0);
+                updateHourlyChart(data.labels, data.values, !hasData);
             } else {
-                // Si no hay un formato reconocible, intentar verificar otras estructuras
-                if (data && data.hourly_data) {
-                    if (data.hourly_data.labels && data.hourly_data.values) {
-                        updateHourlyChart(data.hourly_data.labels, data.hourly_data.values);
-                    }
-                } else if (data && data.statistics) {
-                    // Intentar procesar datos de statistics
-                    const labels = [];
-                    const values = [];
-                    
-                    data.statistics.forEach(item => {
-                        if (item.period) {
-                            // Extraer la hora del timestamp
-                            const hora = item.period.includes('T') ? 
-                                item.period.split('T')[1].substring(0, 5) : 
-                                '00:00';
-                            labels.push(hora);
-                            values.push(item.total_chats || 0);
-                        }
-                    });
-                    
-                    if (labels.length > 0 && values.length > 0) {
-                        updateHourlyChart(labels, values);
-                    } else {
-                        updateHourlyChart([], []); // Sin datos
-                    }
-                } else {
-                    updateHourlyChart([], []); // Sin datos
-                }
+                updateHourlyChart([], [], true);
             }
         })
         .catch(error => {
-            updateHourlyChart([], []); // Mostrar gráfico vacío en caso de error
+            console.error('Error al cargar datos:', error);
+            updateHourlyChart([], [], true);
         });
 }
 
-// Función para actualizar el gráfico de conversaciones por hora con datos dinámicos
-function updateHourlyChart(labels, values) {
-    
+// Función actualizada para actualizar el gráfico de conversaciones por hora
+function updateHourlyChart(labels, values, noData = false) {
     // Verificar si el canvas existe
     const canvas = document.getElementById('hourlyChats');
+    if (!canvas) return;
     
-    // Si el gráfico ya existe, destruirlo completamente
+    // Si el gráfico ya existe, destruirlo
     if (chartInstances['hourlyChats']) {
         chartInstances['hourlyChats'].destroy();
         chartInstances['hourlyChats'] = null;
     }
     
-    // Obtener el contexto para dibujar el gráfico
     const ctx = canvas.getContext('2d');
     
-    // Si no hay datos, mostrar un gráfico vacío con mensaje
-    if (!labels || !values || !labels.length || !values.length) {
-        // Crear un gráfico vacío con mensaje
-        chartInstances['hourlyChats'] = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
-                datasets: [{
-                    label: 'Conversaciones',
-                    data: [0, 0, 0, 0, 0, 0],
-                    borderColor: 'rgba(59, 130, 246, 0.5)',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    fill: true,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        suggestedMax: 5,
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            font: {
-                                size: 10
-                            }
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            font: {
-                                size: 10
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        enabled: false
-                    }
-                }
-            },
-            plugins: [{
-                id: 'noDataText',
-                afterDraw: function(chart) {
-                    if (chart.data.datasets[0].data.every(item => item === 0)) {
-                        var ctx = chart.ctx;
-                        var width = chart.width;
-                        var height = chart.height;
-                        
-                        chart.clear();
-                        
-                        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-                        ctx.fillRect(0, 0, width, height);
-                        
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.font = '16px Arial';
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-                        ctx.fillText('No hay datos disponibles para esta fecha', width / 2, height / 2);
-                    }
-                }
-            }]
-        });
-        
-        return;
+    // Si no hay etiquetas o está marcado como sin datos, generar etiquetas predeterminadas
+    if (!labels || !labels.length) {
+        labels = Array.from({length: 24}, (_, i) => `${String(i).padStart(2, '0')}:00`);
+        values = Array(24).fill(0);
     }
     
     // Crear gradiente para el área bajo la línea
@@ -323,7 +223,11 @@ function updateHourlyChart(labels, values) {
     gradientColors.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
     gradientColors.addColorStop(1, 'rgba(59, 130, 246, 0)');
     
-    // Configurar y crear el gráfico con los datos proporcionados
+    // Calcular un valor máximo sugerido basado en los datos
+    const maxValue = Math.max(...values, 1);
+    const suggestedMax = Math.ceil(maxValue * 1.2); // 20% más alto que el valor máximo
+    
+    // Configurar y crear el gráfico
     chartInstances['hourlyChats'] = new Chart(ctx, {
         type: 'line',
         data: {
@@ -347,6 +251,7 @@ function updateHourlyChart(labels, values) {
             scales: {
                 y: {
                     beginAtZero: true,
+                    suggestedMax: suggestedMax,
                     grid: {
                         color: 'rgba(255, 255, 255, 0.1)'
                     },
@@ -365,6 +270,12 @@ function updateHourlyChart(labels, values) {
                         color: 'rgba(255, 255, 255, 0.7)',
                         font: {
                             size: 10
+                        },
+                        maxRotation: 90,
+                        minRotation: 45,
+                        callback: function(val, index) {
+                            // Mostrar solo algunas etiquetas para evitar superposición
+                            return index % 3 === 0 ? this.getLabelForValue(val) : '';
                         }
                     }
                 }
@@ -389,10 +300,56 @@ function updateHourlyChart(labels, values) {
                     }
                 }
             }
-        }
+        },
+        plugins: [{
+            id: 'noDataText',
+            afterDraw: function(chart) {
+                // Si está marcado como sin datos o todos los valores son cero
+                if (noData || chart.data.datasets[0].data.every(item => item === 0)) {
+                    const ctx = chart.ctx;
+                    const width = chart.width;
+                    const height = chart.height;
+                    
+                    // Dibujar un fondo semitransparente
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                    ctx.fillRect(0, 0, width, height);
+                    
+                    // Dibujar mensaje de "No hay datos"
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = '16px Arial';
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                    ctx.fillText('No hay datos disponibles para esta fecha', width / 2, height / 2);
+                    ctx.restore();
+                }
+            }
+        }]
     });
 }
 
+// Función para inicializar el gráfico de conversaciones por hora
+function initHourlyChart() {
+    const canvas = document.getElementById('hourlyChats');
+    if (!canvas) return;
+    
+    // Mostrar un mensaje mientras se cargan los datos
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.textAlign = 'center';
+    ctx.font = '14px Arial';
+    ctx.fillText('Inicializando gráfico...', canvas.width / 2, canvas.height / 2);
+    
+    // Cargar datos de conversaciones por hora
+    cargarDatosPorHora();
+    
+    // Agregar evento de cambio al selector de fecha si existe
+    const fechaSelector = document.getElementById('fecha');
+    if (fechaSelector) {
+        fechaSelector.addEventListener('change', cargarDatosPorHora);
+    }
+}
 // Función para inicializar el gráfico de conversaciones por hora
 function initHourlyChart() {
     const canvas = document.getElementById('hourlyChats');
