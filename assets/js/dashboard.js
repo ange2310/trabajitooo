@@ -109,9 +109,6 @@ function cargarDatosPorHora() {
                 }
             }
         })
-        .catch(error => {
-            console.error('Error al cargar datos por hora:', error);
-        });
 }
 
 // Función para configurar el listener del selector de fecha

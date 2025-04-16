@@ -30,8 +30,6 @@ $estadisticas_diarias = obtener_estadisticas_chat($inicio, $fin, 'day');
 $estadisticas = [];
 if (isset($estadisticas_diarias['statistics']) && is_array($estadisticas_diarias['statistics'])) {
     $estadisticas = $estadisticas_diarias['statistics'];
-    // Debug: Registrar para verificar el formato de los datos
-    error_log('Estadísticas diarias: ' . print_r($estadisticas[0] ?? [], true));
 }
 
 // Incluir el header

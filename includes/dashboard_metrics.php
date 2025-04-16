@@ -19,9 +19,6 @@ if ($metrics && !isset($metrics['error']) && (isset($metrics['metrics']) || coun
     // Añadir la fecha como parte de la respuesta
     $metricsData['date'] = $date;
     
-    // Mostrar en el log para depuración
-    error_log("Enviando datos al frontend: " . print_r($metricsData, true));
-    
     // Enviar datos como respuesta JSON
     echo json_encode($metricsData);
 } else {

@@ -299,8 +299,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Inicializar el gauge
             if (typeof initGaugeChart === 'function') {
                 initGaugeChart('gaugeOportunidad', '#ffcc00', '#ff9900');
-            } else {
-                console.error('La función initGaugeChart no está disponible');
             }
         }
     }, 300); // 300ms de espera para asegurar que todo está listo

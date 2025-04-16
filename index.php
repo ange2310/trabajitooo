@@ -29,9 +29,6 @@ try {
     // Obtener datos de la API
     $metricas_datos = obtener_metricas_dashboard($fecha);
     
-    // Depuración para ver qué datos estamos recibiendo
-    error_log('Datos recibidos de la API: ' . print_r($metricas_datos, true));
-    
     // Extraer los datos según la estructura recibida
     $datos_metricas = isset($metricas_datos['metrics']) ? $metricas_datos['metrics'] : $metricas_datos;
     
@@ -55,11 +52,9 @@ try {
     ];
     
     $config_dashboard = obtener_configuracion_dashboard();
-    //$conversaciones_por_hora = obtener_estadisticas_chat($fecha, 'hour');
-    
+
     // Procesar datos para usar en los gráficos
     $metricas = procesar_metricas($metricas);
-    //$datos_grafico = procesar_datos_grafico_horas($conversaciones_por_hora);
 } catch (Exception $e) {
     // Si hay un error con la API, mostrar mensaje
     $error_api = "Error al conectar con la API: " . $e->getMessage();
@@ -231,15 +226,13 @@ include_once 'includes/header.php';
 document.addEventListener('DOMContentLoaded', function() {
     // Fecha seleccionada
     const fecha = "<?php echo $fecha; ?>";
-    console.log("Fecha seleccionada en PHP:", fecha);
-    console.log("URL actual:", window.location.href);
     
     // Cargar datos para el gráfico
     if (typeof cargarDatosPorHora === 'function') {
         // Dar tiempo para que se carguen todas las dependencias
-        setTimeout(cargarDatosPorHora, 500);
-    } else {
-        console.error('ADVERTENCIA: cargarDatosPorHora no está disponible');
+        setTimeout(function() {
+            cargarDatosPorHora();  // Llamar la función
+        }, 500);
     }
 });
 </script>

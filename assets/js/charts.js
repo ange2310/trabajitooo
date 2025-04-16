@@ -160,7 +160,6 @@ function initTimeMetricsChart() {
 }
 
 // Función específica para cargar el gráfico de conversaciones por hora
-// Función específica para cargar el gráfico de conversaciones por hora
 function cargarDatosPorHora() {
     // Obtener la fecha seleccionada de la URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -169,12 +168,10 @@ function cargarDatosPorHora() {
     // Si no hay fecha en la URL, usar la fecha actual
     const fecha = fechaURL || new Date().toISOString().split('T')[0];
     
-    console.log('Solicitando datos para fecha:', fecha);
-    
     // Generar timestamp para evitar caché
     const timestamp = new Date().getTime();
     
-    // Aquí está el cambio importante: pasar la fecha correctamente
+    // Asegurarnos de que la fecha se pase correctamente en la URL
     fetch(`includes/conexion_api.php?action=hourly_stats&fecha=${fecha}&t=${timestamp}`)
         .then(response => {
             if (!response.ok) {
@@ -183,7 +180,6 @@ function cargarDatosPorHora() {
             return response.json();
         })
         .then(data => {
-            console.log('Datos recibidos para gráfico:', data);
             
             if (data && data.labels && data.values) {
                 const hasData = data.values.some(v => v > 0);
@@ -193,7 +189,6 @@ function cargarDatosPorHora() {
             }
         })
         .catch(error => {
-            console.error('Error al cargar datos:', error);
             updateHourlyChart([], [], true);
         });
 }
@@ -333,31 +328,29 @@ function initHourlyChart() {
     const canvas = document.getElementById('hourlyChats');
     if (!canvas) return;
     
-    // Mostrar un mensaje mientras se cargan los datos
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.textAlign = 'center';
-    ctx.font = '14px Arial';
-    ctx.fillText('Inicializando gráfico...', canvas.width / 2, canvas.height / 2);
+    // Crear un gráfico vacío
+    updateHourlyChart([], [], true);
     
-    // Cargar datos de conversaciones por hora
-    cargarDatosPorHora();
+    // IMPORTANTE: Obtener explícitamente la fecha de la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const fecha = urlParams.get('fecha') || new Date().toISOString().split('T')[0];
     
-    // Agregar evento de cambio al selector de fecha si existe
-    const fechaSelector = document.getElementById('fecha');
-    if (fechaSelector) {
-        fechaSelector.addEventListener('change', cargarDatosPorHora);
-    }
+    // Generar timestamp para evitar caché
+    const timestamp = new Date().getTime();
+    
+    // Hacer la solicitud directa con la fecha correcta
+    const url = `includes/conexion_api.php?action=hourly_stats&fecha=${fecha}&t=${timestamp}`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.labels && data.values) {
+                const hasData = data.values.some(v => v > 0);
+                updateHourlyChart(data.labels, data.values, !hasData);
+            }
+        })
 }
-// Función para inicializar el gráfico de conversaciones por hora
-function initHourlyChart() {
-    const canvas = document.getElementById('hourlyChats');
-    // Crear un gráfico vacío usando la misma lógica de actualización
-    updateHourlyChart([], []);
-    // Cargar datos de conversaciones por hora después de inicializar
-    cargarDatosPorHora();
-}
+
 
 function fetchDashboardMetrics() {
     // Obtener la fecha del parámetro URL si existe
@@ -535,6 +528,8 @@ function updateConversationStats(received, attended) {
     }
 }
 
+// Función para actualizar el valor del gauge
+// Esta función se llama desde el gráfico de barras y también desde el gráfico de líneas
 function updateGaugeValue(canvasId, value) {
     const canvas = document.getElementById(canvasId);
     
@@ -619,7 +614,6 @@ function getLastDayOfMonth() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 }
-
 
 
 // Función para actualizar la tabla de rendimiento por agente
