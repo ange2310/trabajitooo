@@ -34,6 +34,80 @@ if (isset($estadisticas_diarias['statistics']) && is_array($estadisticas_diarias
 // Obtener configuración del dashboard
 $config_data = obtener_configuracion_dashboard();
 
+// Obtener el objetivo de tiempo de respuesta de la configuración
+$objetivo_tiempo = isset($config_data['config']['first_response_goal_minutes']) ? 
+    $config_data['config']['first_response_goal_minutes'] : 3;
+
+// Calcular la tasa de oportunidad para un período
+$total_dias_con_datos = 0;
+$suma_tasa_oportunidad = 0;
+
+// Si estamos mostrando un solo día, usar la API directamente
+if ($inicio === $fin) {
+    // Obtener métricas del dashboard desde la API para la fecha específica
+    $metricas_datos = obtener_metricas_dashboard($inicio);
+    $datos_metricas = isset($metricas_datos['metrics']) ? $metricas_datos['metrics'] : $metricas_datos;
+    
+    // Obtener directamente la tasa de oportunidad
+    $porcentaje_oportunidad = isset($datos_metricas['opportunity_rate']) ? floatval($datos_metricas['opportunity_rate']) : 0;
+    
+    // Verificar si hay datos para este día
+    if ($porcentaje_oportunidad > 0) {
+        $total_dias_con_datos = 1;
+    }
+} else {
+    // Para un período, calcular el promedio de las tasas diarias
+    if (!empty($estadisticas)) {
+        foreach ($estadisticas as $dia) {
+            $total_conversaciones = intval($dia['total_chats'] ?? 0);
+            
+            // SOLO considerar días donde haya habido conversaciones
+            if ($total_conversaciones > 0) {
+                $total_dias_con_datos++;
+                
+                // Determinar la tasa para este día
+                $tasa_dia = 0;
+                
+                // Si existe en la API, usarla
+                if (isset($dia['opportunity_rate'])) {
+                    $tasa_dia = floatval($dia['opportunity_rate']);
+                } 
+                // Si no, calcularla basada en el tiempo de respuesta
+                else {
+                    $tiempo_respuesta = 0;
+                    
+                    if (isset($dia['average_wait_time']) && is_numeric($dia['average_wait_time'])) {
+                        $tiempo_respuesta = floatval($dia['average_wait_time']);
+                    } elseif (isset($dia['avg_wait_time']) && is_numeric($dia['avg_wait_time'])) {
+                        $tiempo_respuesta = floatval($dia['avg_wait_time']);
+                    } elseif (isset($dia['mean_wait_time']) && is_numeric($dia['mean_wait_time'])) {
+                        $tiempo_respuesta = floatval($dia['mean_wait_time']);
+                    }
+                    
+                    if ($tiempo_respuesta > 0) {
+                        if ($tiempo_respuesta <= $objetivo_tiempo) {
+                            $tasa_dia = 100;
+                        } else {
+                            $tasa_dia = max(0, 100 - (($tiempo_respuesta - $objetivo_tiempo) / $objetivo_tiempo * 5));
+                            if ($tiempo_respuesta > ($objetivo_tiempo * 20)) {
+                                $tasa_dia = min($tasa_dia, 5);
+                            }
+                        }
+                    }
+                }
+                
+                $suma_tasa_oportunidad += $tasa_dia;
+            }
+        }
+        
+        // Calcular promedio
+        $porcentaje_oportunidad = ($total_dias_con_datos > 0) ? 
+            $suma_tasa_oportunidad / $total_dias_con_datos : 0;
+    } else {
+        $porcentaje_oportunidad = 0;
+        $total_dias_con_datos = 0;
+    }
+}
 // Incluir el header
 include_once 'includes/header.php';
 ?>
@@ -73,42 +147,8 @@ include_once 'includes/header.php';
                 <h2>Tasa de Oportunidad</h2>
                 <div class="gauge-container">
                     <canvas id="gaugeOportunidad"></canvas>
-                    <?php 
-                    // Obtener una tasa promedio de oportunidad (normalmente sería desde API)
-                    // Para este ejemplo, calcularemos en base a tiempos de respuesta
-                    $tasa_oportunidad = 0;
-                    $total_agentes_con_datos = 0;
-                    
-                    foreach ($rendimiento_procesado as $agente) {
-                        // Si el agente tiene un tiempo de respuesta registrado
-                        if (isset($agente['avg_response_time']) && $agente['avg_response_time'] > 0) {
-                            // Cuanto menor es el tiempo de respuesta, mayor es la oportunidad
-                            // Meta: respuestas en menos de 3 minutos
-                            $objetivo_tiempo = isset($config_data['config']['first_response_goal_minutes']) ? 
-                                $config_data['config']['first_response_goal_minutes'] : 3;
-                            
-                            $tiempo = floatval($agente['avg_response_time']);
-                            
-                            // Si cumple el objetivo, 100% de oportunidad, si no, proporcional
-                            if ($tiempo <= $objetivo_tiempo) {
-                                $tasa_agente = 100;
-                            } else {
-                                // Formula: cuanto más se acerca al objetivo, mayor puntaje
-                                $tasa_agente = max(0, 100 - (($tiempo - $objetivo_tiempo) / $objetivo_tiempo * 100));
-                            }
-                            
-                            $tasa_oportunidad += $tasa_agente;
-                            $total_agentes_con_datos++;
-                        }
-                    }
-                    
-                    // Calcular el promedio
-                    $porcentaje_oportunidad = ($total_agentes_con_datos > 0) ? 
-                        $tasa_oportunidad / $total_agentes_con_datos : 75; // Valor predeterminado si no hay datos
-                    ?>
-                    <div class="gauge-value"><?php echo number_format($porcentaje_oportunidad, 2); ?></div>
+                    <div class="gauge-value" id="valor-oportunidad"><?php echo number_format($porcentaje_oportunidad, 2); ?></div>
                 </div>
-                <p class="gauge-label">Basado en el tiempo de primera respuesta de los agentes</p>
             </div>
             
             <!-- Tabla de rendimiento por agente -->
@@ -133,9 +173,6 @@ include_once 'includes/header.php';
                             </thead>
                             <tbody>
                                 <?php 
-                                $objetivo_tiempo = isset($config_data['config']['first_response_goal_minutes']) ? 
-                                    $config_data['config']['first_response_goal_minutes'] : 3;
-                                
                                 foreach ($rendimiento_procesado as $agente): 
                                     $tiempo = floatval($agente['avg_response_time'] ?? 0);
                                     
@@ -150,7 +187,7 @@ include_once 'includes/header.php';
                                         <td data-label="Agente"><?php echo htmlspecialchars($agente['agent_name']); ?></td>
                                         <td data-label="Tiempo de Respuesta"><?php echo number_format($tiempo, 2); ?> min</td>
                                         <td data-label="Tiempo Meta"><?php echo $objetivo_tiempo; ?> min</td>
-                                        <td data-label="Tasa de Oportunidad" class="<?php echo ($tasa_oportunidad_agente >= 90) ? 'text-success' : ''; ?>">
+                                        <td data-label="Tasa de Oportunidad" class="<?php echo ($tasa_oportunidad_agente >= 90) ? 'text-success' : (($tasa_oportunidad_agente < 50) ? 'text-danger' : ''); ?>">
                                             <?php echo number_format($tasa_oportunidad_agente, 2) . '%'; ?>
                                         </td>
                                     </tr>
@@ -182,59 +219,50 @@ include_once 'includes/header.php';
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php 
-                                $objetivo_tiempo = isset($config_data['config']['first_response_goal_minutes']) ? 
-                                    $config_data['config']['first_response_goal_minutes'] : 3;
-                                    
-                                    foreach ($estadisticas as $dia): 
-                                        // Verificar si hay conversaciones para este día
-                                        $total_conversaciones = intval($dia['total_chats'] ?? 0);
+                            <?php 
+                            foreach ($estadisticas as $dia): 
+                                $total_conversaciones = intval($dia['total_chats'] ?? 0);
+
+                                // Tiempo de respuesta
+                                $tiempo_respuesta = 0;
+                                if (isset($dia['average_wait_time']) && is_numeric($dia['average_wait_time'])) {
+                                    $tiempo_respuesta = floatval($dia['average_wait_time']);
+                                } elseif (isset($dia['avg_wait_time']) && is_numeric($dia['avg_wait_time'])) {
+                                    $tiempo_respuesta = floatval($dia['avg_wait_time']);
+                                } elseif (isset($dia['mean_wait_time']) && is_numeric($dia['mean_wait_time'])) {
+                                    $tiempo_respuesta = floatval($dia['mean_wait_time']);
+                                }
+
+                                // Tasa de oportunidad directa desde la API o calcularla si no existe
+                                if (isset($dia['opportunity_rate'])) {
+                                    $tasa_oportunidad_dia = floatval($dia['opportunity_rate']);
+                                } else {
+                                    // Si no hay conversaciones, la tasa es 0
+                                    if ($total_conversaciones <= 0 || $tiempo_respuesta <= 0) {
+                                        $tasa_oportunidad_dia = 0;
+                                    } else if ($tiempo_respuesta <= $objetivo_tiempo) {
+                                        // Si cumple el objetivo, 100%
+                                        $tasa_oportunidad_dia = 100;
+                                    } else {
+                                        // Cálculo para tiempos que exceden el objetivo
+                                        $tasa_oportunidad_dia = max(0, 100 - (($tiempo_respuesta - $objetivo_tiempo) / $objetivo_tiempo * 5));
                                         
-                                        if ($total_conversaciones <= 0) {
-                                            // Si no hay conversaciones, tiempo de respuesta es 0
-                                            $tiempo_respuesta = 0;
-                                            $tasa_oportunidad_dia = 0; // Sin conversaciones, tasa 0 - NO 100%
-                                        } else {
-                                            // Buscar el campo correcto para el tiempo de respuesta 
-                                            // (podría ser tiempo de espera en este caso)
-                                            $tiempo_respuesta = 0;
-                                            $tiempo_encontrado = false;
-
-                                            // Verificar los diferentes campos donde podría estar el tiempo
-                                            if (isset($dia['average_wait_time']) && is_numeric($dia['average_wait_time'])) {
-                                                $tiempo_respuesta = floatval($dia['average_wait_time']);
-                                                $tiempo_encontrado = true;
-                                            } elseif (isset($dia['avg_wait_time']) && is_numeric($dia['avg_wait_time'])) {
-                                                $tiempo_respuesta = floatval($dia['avg_wait_time']);
-                                                $tiempo_encontrado = true;
-                                            } elseif (isset($dia['mean_wait_time']) && is_numeric($dia['mean_wait_time'])) {
-                                                $tiempo_respuesta = floatval($dia['mean_wait_time']);
-                                                $tiempo_encontrado = true;
-                                            }
-
-                                            // Calcular la tasa de oportunidad basada en el tiempo:
-                                            // - Si el tiempo es muy alto, la tasa debe ser baja
-                                            // - Si no hay tiempo, la tasa debe ser 0
-                                            if (!$tiempo_encontrado || $tiempo_respuesta <= 0) {
-                                                $tasa_oportunidad_dia = 0;
-                                            } else if ($tiempo_respuesta <= $objetivo_tiempo) {
-                                                $tasa_oportunidad_dia = 100;
-                                            } else {
-                                                // Para tiempos muy altos como 903.4, la tasa debe ser muy baja
-                                                // Esta fórmula da ~16.7% para tiempo=903.4 y objetivo=3
-                                                $tasa_oportunidad_dia = max(0, 100 - (($tiempo_respuesta - $objetivo_tiempo) / $objetivo_tiempo * 5));
-                                            }
+                                        // Limitar para tiempos extremadamente altos
+                                        if ($tiempo_respuesta > ($objetivo_tiempo * 20)) {
+                                            $tasa_oportunidad_dia = min($tasa_oportunidad_dia, 5);
                                         }
-                                ?>
-                                    <tr>
-                                        <td data-label="Fecha"><?php echo date('d/m/Y', strtotime($dia['period'] ?? date('Y-m-d'))); ?></td>
-                                        <td data-label="Conversaciones"><?php echo intval($dia['total_chats'] ?? 0); ?></td>
-                                        <td data-label="Tiempo Respuesta"><?php echo number_format($tiempo_respuesta, 2); ?> min</td>
-                                        <td data-label="Tasa de Oportunidad">
-                                            <?php echo number_format($tasa_oportunidad_dia, 2) . '%'; ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
+                                    }
+                                }
+                            ?>
+                                <tr>
+                                    <td data-label="Fecha"><?php echo date('d/m/Y', strtotime($dia['period'] ?? date('Y-m-d'))); ?></td>
+                                    <td data-label="Conversaciones"><?php echo $total_conversaciones; ?></td>
+                                    <td data-label="Tiempo Respuesta"><?php echo number_format($tiempo_respuesta, 2); ?> min</td>
+                                    <td data-label="Tasa de Oportunidad" class="<?php echo ($tasa_oportunidad_dia >= 90) ? 'text-success' : (($tasa_oportunidad_dia < 50) ? 'text-danger' : ''); ?>">
+                                        <?php echo number_format($tasa_oportunidad_dia, 2) . '%'; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
@@ -247,14 +275,34 @@ include_once 'includes/header.php';
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="assets/js/charts.js"></script>
 <script src="assets/js/dashboard.js"></script>
+
 <script>
+
+// SCRIPT ESPECÍFICO PARA ESTA PÁGINA
 document.addEventListener('DOMContentLoaded', function() {
-    // Eliminar otros event listeners para evitar conflictos
+    // Esperar a que todo esté cargado antes de inicializar el gauge
     setTimeout(function() {
         const canvas = document.getElementById('gaugeOportunidad');
         if (canvas) {
-            initGaugeChart('gaugeOportunidad', '#ffcc00', '#ff9900');
-        } 
-    }, 100);
+            // Limpiar cualquier instancia previa
+            if (window.chartInstances && window.chartInstances['gaugeOportunidad']) {
+                window.chartInstances['gaugeOportunidad'].destroy();
+                window.chartInstances['gaugeOportunidad'] = null;
+            }
+            
+            // Asegurarse de que el valor no tenga formato incorrecto
+            const valueElement = document.getElementById('valor-oportunidad');
+            if (valueElement) {
+                let rawValue = valueElement.textContent.trim();
+            }
+            
+            // Inicializar el gauge
+            if (typeof initGaugeChart === 'function') {
+                initGaugeChart('gaugeOportunidad', '#ffcc00', '#ff9900');
+            } else {
+                console.error('La función initGaugeChart no está disponible');
+            }
+        }
+    }, 300); // 300ms de espera para asegurar que todo está listo
 });
 </script>
