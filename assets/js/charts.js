@@ -11,57 +11,56 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
  // Función principal para inicializar todos los gráficos
-function initCharts() {
+ function initCharts() {
     // Verificar qué página estamos viendo para evitar inicializaciones duplicadas
     const currentPath = window.location.pathname;
+    const isMetricaAtencion = currentPath.includes('metrica_atencion.php');
+    const isMetricaOportunidad = currentPath.includes('metrica_oportunidad.php');
+    const isMetricaAbandono = currentPath.includes('metrica_abandono.php');
     
-    // Inicializar gráficos de gauge (medidores circulares)
-    initGaugeChart('gaugeAtencion', '#9933ff', '#3366ff');
-    initGaugeChart('gaugeOportunidad', '#ffcc00', '#ff9900');
-    initGaugeChart('gaugeAbandono', '#ff3366', '#ff0000');
-    initGaugeChart('gaugeConversaciones', '#4338ca', '#6d28d9');
-
-     // Si estamos en una página específica de métricas, NO inicializar sus gauges correspondientes
-    // porque ya se habrán inicializado con scripts específicos
-    if (!currentPath.includes('metrica_atencion.php')) {
+    // Eliminar la inicialización duplicada que está al inicio
+    // y solo inicializar si el elemento existe y estamos en la página adecuada
+    
+    const gaugeAtencion = document.getElementById('gaugeAtencion');
+    if (gaugeAtencion && !isMetricaAtencion) {
         initGaugeChart('gaugeAtencion', '#9933ff', '#3366ff');
-    } else {
-        console.log('Saltando inicialización de gaugeAtencion porque ya está inicializado en metrica_atencion.php');
     }
     
-    if (!currentPath.includes('metrica_oportunidad.php')) {
+    const gaugeOportunidad = document.getElementById('gaugeOportunidad');
+    if (gaugeOportunidad && !isMetricaOportunidad) {
         initGaugeChart('gaugeOportunidad', '#ffcc00', '#ff9900');
-    } else {
-        console.log('Saltando inicialización de gaugeOportunidad porque ya está inicializado en metrica_oportunidad.php');
     }
     
-    if (!currentPath.includes('metrica_abandono.php')) {
+    const gaugeAbandono = document.getElementById('gaugeAbandono');
+    if (gaugeAbandono && !isMetricaAbandono) {
         initGaugeChart('gaugeAbandono', '#ff3366', '#ff0000');
-    } else {
-        console.log('Saltando inicialización de gaugeAbandono porque ya está inicializado en metrica_abandono.php');
     }
-
-    // Estos siempre se inicializan
-    initGaugeChart('gaugeConversaciones', '#4338ca', '#6d28d9');
-
+    
+    // El gauge de conversaciones solo existe en la página principal
+    const gaugeConversaciones = document.getElementById('gaugeConversaciones');
+    if (gaugeConversaciones) {
+        initGaugeChart('gaugeConversaciones', '#4338ca', '#6d28d9');
+    }
+    
     // Inicializar gráfico de barras para métricas de tiempo
-    initTimeMetricsChart();
+    const timeMetrics = document.getElementById('timeMetrics');
+    if (timeMetrics) {
+        initTimeMetricsChart();
+    }
     
     // Inicializar gráfico de línea para conversaciones por hora
-    initHourlyChart();
+    const hourlyChats = document.getElementById('hourlyChats');
+    if (hourlyChats) {
+        initHourlyChart();
+    }
 }
 
 // Función para inicializar el gráfico de barras de métricas de tiempo
 function initTimeMetricsChart() {
     const canvas = document.getElementById('timeMetrics');
-    if (!canvas) {
-        console.warn('Canvas not found: timeMetrics');
-        return;
-    }
     
     // Destruir el gráfico existente si existe
     if (chartInstances['timeMetrics']) {
-        console.log('Destroying existing time metrics chart');
         chartInstances['timeMetrics'].destroy();
         chartInstances['timeMetrics'] = null;
     }
@@ -162,10 +161,8 @@ function initTimeMetricsChart() {
 
 // Función para cargar datos por hora (mejorada)
 function cargarDatosPorHora() {
-    console.log('Ejecutando cargarDatosPorHora...');
     
     const fecha = document.getElementById('fecha')?.value || new Date().toISOString().split('T')[0];
-    console.log('Fecha seleccionada para cargar datos: ', fecha);
     
     // Calcular inicio y fin de mes para la fecha seleccionada
     const fechaObj = new Date(fecha);
@@ -175,8 +172,6 @@ function cargarDatosPorHora() {
     const inicioFormatted = inicioMes.toISOString().split('T')[0];
     const finFormatted = finMes.toISOString().split('T')[0];
     
-    console.log(`Obteniendo estadísticas desde ${inicioFormatted} hasta ${finFormatted}`);
-    
     fetch(`includes/get_metrics.php?action=hourly_stats&start_date=${inicioFormatted}&end_date=${finFormatted}`)
         .then(response => {
             if (!response.ok) {
@@ -185,21 +180,17 @@ function cargarDatosPorHora() {
             return response.json();
         })
         .then(data => {
-            console.log('Datos por hora cargados:', data);
             if (data && data.labels && data.values) {
                 if (typeof updateHourlyChart === 'function') {
                     updateHourlyChart(data.labels, data.values);
                 }
             } else {
-                console.warn('Formato de datos incorrecto para el gráfico horario:', data);
                 // Si no hay un formato reconocible, intentar verificar otras estructuras
                 if (data && data.hourly_data) {
-                    console.log('Encontrada estructura alternative hourly_data');
                     if (data.hourly_data.labels && data.hourly_data.values) {
                         updateHourlyChart(data.hourly_data.labels, data.hourly_data.values);
                     }
                 } else if (data && data.statistics) {
-                    console.log('Encontrada estructura statistics, procesando...');
                     // Intentar procesar datos de statistics
                     const labels = [];
                     const values = [];
@@ -226,25 +217,18 @@ function cargarDatosPorHora() {
             }
         })
         .catch(error => {
-            console.error('Error al cargar datos por hora:', error);
             updateHourlyChart([], []); // Mostrar gráfico vacío en caso de error
         });
 }
 
 // Función para actualizar el gráfico de conversaciones por hora con datos dinámicos
 function updateHourlyChart(labels, values) {
-    console.log('Updating hourly chart with new data:', { labels, values });
     
     // Verificar si el canvas existe
     const canvas = document.getElementById('hourlyChats');
-    if (!canvas) {
-        console.warn('Canvas not found: hourlyChats');
-        return;
-    }
     
     // Si el gráfico ya existe, destruirlo completamente
     if (chartInstances['hourlyChats']) {
-        console.log('Destroying existing hourly chart');
         chartInstances['hourlyChats'].destroy();
         chartInstances['hourlyChats'] = null;
     }
@@ -407,17 +391,11 @@ function updateHourlyChart(labels, values) {
             }
         }
     });
-    
-    console.log('Hourly chart updated successfully');
 }
 
 // Función para inicializar el gráfico de conversaciones por hora
 function initHourlyChart() {
     const canvas = document.getElementById('hourlyChats');
-    if (!canvas) {
-        console.warn('Canvas not found: hourlyChats');
-        return;
-    }
     // Crear un gráfico vacío usando la misma lógica de actualización
     updateHourlyChart([], []);
     // Cargar datos de conversaciones por hora después de inicializar
@@ -473,18 +451,10 @@ function fetchDashboardMetrics() {
 
 // Función para inicializar gráficos de tipo gauge
 function initGaugeChart(canvasId, color1, color2) {
-    console.log('Initializing gauge chart: ' + canvasId);
     const canvas = document.getElementById(canvasId);
     
-    // Verificar si este gauge ya está inicializado
-    if (initializedGauges[canvasId]) {
-        console.log(`Gauge ${canvasId} ya está inicializado, saltando.`);
-        return;
-    }
-
     // Destruir el gráfico existente si existe
     if (chartInstances[canvasId]) {
-        console.log('Destroying existing chart: ' + canvasId);
         chartInstances[canvasId].destroy();
         chartInstances[canvasId] = null;
     }
@@ -610,7 +580,6 @@ function updateConversationStats(received, attended) {
 
 function updateGaugeValue(canvasId, value) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
     
     // Asegurar que el valor sea numérico y no NaN
     const numValue = parseFloat(value);
@@ -625,21 +594,15 @@ function updateGaugeValue(canvasId, value) {
 // Función para modificar las métricas de tiempo
 function updateTimeMetric(metricId, value) {
     const element = document.getElementById(metricId);
-    if (element) {
-        // Buscar el elemento span con clase time-value dentro del elemento
-        const valueElement = element.querySelector('.time-value');
-        if (valueElement) {
-            // Asegurar que el valor sea numérico y no NaN
-            const numValue = parseFloat(value);
-            const displayValue = isNaN(numValue) ? 0 : numValue.toFixed(1);
-            
-            valueElement.textContent = `${displayValue} minutos`;
-            console.log(`Actualizado ${metricId} a ${displayValue} minutos`);
-        } else {
-            console.warn(`No se encontró el elemento .time-value dentro de #${metricId}`);
-        }
-    } else {
-        console.warn(`No se encontró el elemento con ID: ${metricId}`);
+    
+    // Buscar el elemento span con clase time-value dentro del elemento
+    const valueElement = element.querySelector('.time-value');
+    if (valueElement) {
+        // Asegurar que el valor sea numérico y no NaN
+        const numValue = parseFloat(value);
+        const displayValue = isNaN(numValue) ? 0 : numValue.toFixed(1);
+        
+        valueElement.textContent = `${displayValue} minutos`;
     }
 }
 
@@ -705,10 +668,6 @@ function getLastDayOfMonth() {
 // Función para actualizar la tabla de rendimiento por agente
 function updateAgentPerformanceTable(data) {
     const tableBody = document.querySelector('.agent-performance-table tbody');
-    if (!tableBody) {
-        console.warn('No se encontró el cuerpo de la tabla de rendimiento de agentes');
-        return;
-    }
     
     // Limpiar tabla
     tableBody.innerHTML = '';
@@ -753,13 +712,10 @@ function updateAgentPerformanceTable(data) {
         
         tableBody.appendChild(row);
     });
-    
-    console.log(`Tabla de rendimiento actualizada con ${data.length} agentes`);
 }
 
 // Función para cargar datos de rendimiento de agentes
 function loadAgentPerformanceData(startDate, endDate) {
-    console.log(`Cargando datos de rendimiento de agentes desde ${startDate} hasta ${endDate}`);
     
     const url = `includes/get_metrics.php?action=agent_performance&start_date=${startDate}&end_date=${endDate}`;
     
@@ -771,7 +727,6 @@ function loadAgentPerformanceData(startDate, endDate) {
             return response.json();
         })
         .then(data => {
-            console.log('Datos de rendimiento de agentes cargados:', data);
             
             // Verificar estructura de datos
             const agentData = Array.isArray(data?.agents) ? data.agents : Array.isArray(data) ? data : [];
@@ -780,7 +735,6 @@ function loadAgentPerformanceData(startDate, endDate) {
             updateAgentPerformanceTable(agentData);
         })
         .catch(error => {
-            console.error('Error al cargar datos de rendimiento de agentes:', error);
             updateAgentPerformanceTable([]); // Mostrar tabla vacía en caso de error
         });
 }
@@ -788,10 +742,6 @@ function loadAgentPerformanceData(startDate, endDate) {
 // Función para inicializar la tabla de rendimiento de agentes
 function initAgentPerformanceTable() {
     const tableContainer = document.querySelector('.agent-table-container');
-    if (!tableContainer) {
-        console.warn('No se encontró el contenedor de la tabla de rendimiento de agentes');
-        return;
-    }
     
     // Obtener fechas del filtro o usar valores predeterminados
     const startDateInput = document.getElementById('inicio');

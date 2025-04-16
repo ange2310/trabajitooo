@@ -229,19 +229,16 @@ include_once 'includes/header.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Index.php: DOM Content Loaded');
-    
+
     // Datos para el gráfico de conversaciones por hora
     var hourlyData = {
         labels: <?php echo json_encode($datos_grafico['labels'] ?? []); ?>,
         values: <?php echo json_encode($datos_grafico['values'] ?? []); ?>
     };
     
-    console.log('Datos para gráfico de horas:', hourlyData);
     
     // Verificar si hay datos para graficar
     const fecha = document.getElementById('fecha')?.value || "<?php echo $fecha; ?>";
-    console.log('Fecha seleccionada:', fecha);
 
     setTimeout(function() {
         // Si hay datos y la función está disponible, actualizar el gráfico
@@ -249,10 +246,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Al cambiar de fecha, siempre limpiar y volver a crear el gráfico
             // Pasando los datos según si hay contenido o no
             if (hourlyData.labels.length > 0 && hourlyData.values.length > 0) {
-                console.log('Actualizando gráfico con datos:', hourlyData);
                 updateHourlyChart(hourlyData.labels, hourlyData.values);
             } else {
-                console.log('No hay datos para esta fecha, mostrando gráfico vacío');
                 // Pasar arrays vacíos para forzar la creación de un gráfico vacío
                 updateHourlyChart([], []);
             }

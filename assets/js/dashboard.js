@@ -1,9 +1,9 @@
+// Código para reemplazar o agregar a dashboard.js
+
 document.addEventListener('DOMContentLoaded', function() {
-    
     const sidebar = document.querySelector('.sidebar');
     const contentWrapper = document.querySelector('.content-wrapper');
     const toggleSidebar = document.getElementById('toggle-sidebar');
-    const mobileToggle = document.getElementById('mobile-toggle');
     
     // Comprobar el estado inicial con cookie
     const cookieCollapsed = document.cookie.split('; ').find(row => row.startsWith('sidebar_collapsed='));
@@ -26,9 +26,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Redimensionar gráficos después de la transición
         setTimeout(function() {
-            if (typeof resizeAllCharts === 'function') {
-                resizeAllCharts();
+            // Si existe la función para redimensionar gráficos, ejecutarla
+            if (typeof window.resizeAllCharts === 'function') {
+                window.resizeAllCharts();
             }
+            
+            // Forzar reflow para asegurar que los elementos se ajusten correctamente
+            document.body.style.display = 'none';
+            document.body.offsetHeight; // Trigger reflow
+            document.body.style.display = '';
         }, 300);
     }
     
@@ -37,45 +43,44 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleSidebar.addEventListener('click', toggleSidebarState);
     }
     
-    // Evento para móviles
+    // Para móviles también ajustamos el comportamiento
+    const mobileToggle = document.getElementById('mobile-toggle');
     if (mobileToggle) {
         mobileToggle.addEventListener('click', function() {
             sidebar.classList.toggle('active');
-            
-            // Redimensionar gráficos después de la transición
-            setTimeout(function() {
-                if (typeof resizeAllCharts === 'function') {
-                    resizeAllCharts();
-                }
-            }, 300);
         });
     }
     
-    /* ===== Manejo de los Gráficos y Actualización de Datos ===== */
-    
-    // Configurar listener para cambio de fecha manual (sin submit de formulario)
-    setupDateListener();
-    
-    // Inicializar datos si están disponibles desde PHP
-    if (typeof dashboard_data !== 'undefined') {
+    // Ajustar comportamiento responsive
+    function handleResize() {
+        const windowWidth = window.innerWidth;
         
-        // Esperar a que los gráficos estén inicializados antes de actualizar
-        setTimeout(function() {
-            // Actualizar el gráfico de conversaciones por hora si la función está disponible
-            if (typeof updateHourlyChart === 'function' && 
-                dashboard_data.hourlyData && 
-                dashboard_data.hourlyData.labels && 
-                dashboard_data.hourlyData.values) {
-                updateHourlyChart(
-                    dashboard_data.hourlyData.labels, 
-                    dashboard_data.hourlyData.values
-                );
-            } else {
-                // Si no hay datos por hora en el paso inicial, intentar cargarlos
-                cargarDatosPorHora();
+        if (windowWidth <= 768) {
+            // En móviles, ocultar sidebar y ajustar contenido
+            sidebar.classList.remove('collapsed');
+            contentWrapper.classList.add('full-width');
+            contentWrapper.style.marginLeft = '0';
+            contentWrapper.style.width = '100%';
+        } else {
+            // En desktop, restaurar estado según cookie
+            if (cookieCollapsed) {
+                const isCollapsed = cookieCollapsed.split('=')[1] === 'true';
+                if (isCollapsed) {
+                    sidebar.classList.add('collapsed');
+                    contentWrapper.classList.add('full-width');
+                } else {
+                    sidebar.classList.remove('collapsed');
+                    contentWrapper.classList.remove('full-width');
+                }
             }
-        }, 5); // tiempo para que charts.js inicialice los gráficos en ms
+        }
     }
+    
+    // Inicializar según tamaño de pantalla
+    handleResize();
+    
+    // Actualizar al cambiar tamaño de ventana
+    window.addEventListener('resize', handleResize);
 });
 
 // Función para cargar datos por hora
@@ -98,7 +103,6 @@ function cargarDatosPorHora() {
             return response.json();
         })
         .then(data => {
-            console.log('Datos por hora cargados:', data);
             if (data && data.labels && data.values) {
                 if (typeof updateHourlyChart === 'function') {
                     updateHourlyChart(data.labels, data.values);
@@ -130,7 +134,6 @@ function setupDateListener() {
             fechaInput.addEventListener('change', function() {
                 // Obtener la fecha seleccionada
                 const nuevaFecha = this.value;
-                console.log('Nueva fecha seleccionada:', nuevaFecha);
                 
                 // Intentar actualizar gráficos con AJAX si la función está disponible
                 if (typeof loadDashboardData === 'function') {

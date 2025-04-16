@@ -196,8 +196,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         const canvas = document.getElementById('gaugeAtencion');
         if (canvas) {
-            console.log('Inicializando gauge desde metrica_atencion.php');
-            
             // Limpiar cualquier instancia previa
             if (window.chartInstances && window.chartInstances['gaugeAtencion']) {
                 window.chartInstances['gaugeAtencion'].destroy();
@@ -208,7 +206,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const valueElement = document.getElementById('valor-atencion');
             if (valueElement) {
                 let rawValue = valueElement.textContent.trim();
-                console.log('Valor actual del gauge:', rawValue);
             }
             
             // Inicializar el gauge

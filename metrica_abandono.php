@@ -328,7 +328,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         const canvas = document.getElementById('gaugeAbandono');
         if (canvas) {
-            console.log('Inicializando gauge desde metrica_abandono.php');
             
             // Limpiar cualquier instancia previa
             if (window.chartInstances && window.chartInstances['gaugeAbandono']) {
@@ -340,8 +339,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const valueElement = document.getElementById('valor-abandono');
             if (valueElement) {
                 let rawValue = valueElement.textContent.trim();
-                console.log('Valor actual del gauge:', rawValue);
-                
                 // Solo mantener el número (quitar el %)
                 if (rawValue.includes('%')) {
                     rawValue = rawValue.replace('%', '').trim();
