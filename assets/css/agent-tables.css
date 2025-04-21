@@ -1,4 +1,4 @@
-/* Estilos mejorados para tablas de agentes en el dashboard */
+/* Estilos optimizados para tablas de agentes en el dashboard */
 
 /* Contenedor de la tabla */
 .table-card {
@@ -118,33 +118,6 @@
 .data-table td:nth-child(5),
 .data-table td:nth-child(6) {
     color: #f59e0b;
-}
-
-/* Estilos para el sistema de valoración con estrellas */
-.rating {
-    display: flex;
-    align-items: center;
-    color: #f59e0b;
-}
-
-.rating i {
-    margin-right: 2px;
-}
-
-.rating .fa-star,
-.rating .fa-star-half-alt {
-    color: #f59e0b;
-    text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
-}
-
-.rating .far.fa-star {
-    color: rgba(255, 255, 255, 0.2);
-}
-
-.rating span {
-    color: #94a3b8;
-    margin-left: 6px;
-    font-size: 12px;
 }
 
 /* Estilos para el estado vacío */
@@ -292,34 +265,4 @@
     .data-table td:first-child::before {
         display: none;
     }
-    
-    .rating {
-        justify-content: flex-end;
-    }
-}
-
-/* Animación de carga para las tablas */
-@keyframes shimmer {
-    0% {
-        background-position: -1000px 0;
-    }
-    100% {
-        background-position: 1000px 0;
-    }
-}
-
-.table-loading .data-table td {
-    position: relative;
-    overflow: hidden;
-}
-
-.table-loading .data-table td:after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0) 100%);
-    animation: shimmer 2s infinite;
 }

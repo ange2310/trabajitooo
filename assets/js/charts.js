@@ -10,17 +10,15 @@ document.addEventListener('DOMContentLoaded', function() {
     fetchDashboardMetrics(); // Cargamos datos reales y luego inicializamos charts
 });
 
- // Función principal para inicializar todos los gráficos
- function initCharts() {
+// Función principal para inicializar todos los gráficos
+function initCharts() {
     // Verificar qué página estamos viendo para evitar inicializaciones duplicadas
     const currentPath = window.location.pathname;
     const isMetricaAtencion = currentPath.includes('metrica_atencion.php');
     const isMetricaOportunidad = currentPath.includes('metrica_oportunidad.php');
     const isMetricaAbandono = currentPath.includes('metrica_abandono.php');
     
-    // Eliminar la inicialización duplicada que está al inicio
-    // y solo inicializar si el elemento existe y estamos en la página adecuada
-    
+    // Inicializar solo si el elemento existe y estamos en la página adecuada
     const gaugeAtencion = document.getElementById('gaugeAtencion');
     if (gaugeAtencion && !isMetricaAtencion) {
         initGaugeChart('gaugeAtencion', '#9933ff', '#3366ff');
@@ -159,50 +157,16 @@ function initTimeMetricsChart() {
     });
 }
 
-// Función específica para cargar el gráfico de conversaciones por hora
-function cargarDatosPorHora() {
-    // Obtener la fecha seleccionada de la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const fechaURL = urlParams.get('fecha');
-    
-    // Si no hay fecha en la URL, usar la fecha actual
-    const fecha = fechaURL || new Date().toISOString().split('T')[0];
-    
-    // Generar timestamp para evitar caché
-    const timestamp = new Date().getTime();
-    
-    // Asegurarnos de que la fecha se pase correctamente en la URL
-    fetch(`includes/conexion_api.php?action=hourly_stats&fecha=${fecha}&t=${timestamp}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Error HTTP: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            
-            if (data && data.labels && data.values) {
-                const hasData = data.values.some(v => v > 0);
-                updateHourlyChart(data.labels, data.values, !hasData);
-            } else {
-                updateHourlyChart([], [], true);
-            }
-        })
-        .catch(error => {
-            updateHourlyChart([], [], true);
-        });
-}
-
-// Función actualizada para actualizar el gráfico de conversaciones por hora
+// Función para actualizar el gráfico de conversaciones por hora
 function updateHourlyChart(labels, values, noData = false) {
     // Verificar si el canvas existe
     const canvas = document.getElementById('hourlyChats');
     if (!canvas) return;
     
     // Si el gráfico ya existe, destruirlo
-    if (chartInstances['hourlyChats']) {
-        chartInstances['hourlyChats'].destroy();
-        chartInstances['hourlyChats'] = null;
+    if (chartInstances['hourlyCharts']) {
+        chartInstances['hourlyCharts'].destroy();
+        chartInstances['hourlyCharts'] = null;
     }
     
     const ctx = canvas.getContext('2d');
@@ -223,7 +187,7 @@ function updateHourlyChart(labels, values, noData = false) {
     const suggestedMax = Math.ceil(maxValue * 1.2); // 20% más alto que el valor máximo
     
     // Configurar y crear el gráfico
-    chartInstances['hourlyChats'] = new Chart(ctx, {
+    chartInstances['hourlyCharts'] = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
@@ -269,7 +233,6 @@ function updateHourlyChart(labels, values, noData = false) {
                         maxRotation: 90,
                         minRotation: 45,
                         callback: function(val, index) {
-                            // Mostrar solo algunas etiquetas para evitar superposición
                             return index % 3 === 0 ? this.getLabelForValue(val) : '';
                         }
                     }
@@ -299,18 +262,15 @@ function updateHourlyChart(labels, values, noData = false) {
         plugins: [{
             id: 'noDataText',
             afterDraw: function(chart) {
-                // Si está marcado como sin datos o todos los valores son cero
                 if (noData || chart.data.datasets[0].data.every(item => item === 0)) {
                     const ctx = chart.ctx;
                     const width = chart.width;
                     const height = chart.height;
                     
-                    // Dibujar un fondo semitransparente
                     ctx.save();
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
                     ctx.fillRect(0, 0, width, height);
                     
-                    // Dibujar mensaje de "No hay datos"
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.font = '16px Arial';
@@ -331,14 +291,14 @@ function initHourlyChart() {
     // Crear un gráfico vacío
     updateHourlyChart([], [], true);
     
-    // IMPORTANTE: Obtener explícitamente la fecha de la URL
+    // Obtener la fecha de la URL
     const urlParams = new URLSearchParams(window.location.search);
     const fecha = urlParams.get('fecha') || new Date().toISOString().split('T')[0];
     
     // Generar timestamp para evitar caché
     const timestamp = new Date().getTime();
     
-    // Hacer la solicitud directa con la fecha correcta
+    // Hacer la solicitud directa
     const url = `includes/conexion_api.php?action=hourly_stats&fecha=${fecha}&t=${timestamp}`;
     
     fetch(url)
@@ -351,7 +311,7 @@ function initHourlyChart() {
         })
 }
 
-
+// Función para obtener métricas del dashboard
 function fetchDashboardMetrics() {
     // Obtener la fecha del parámetro URL si existe
     const urlParams = new URLSearchParams(window.location.search);
@@ -364,7 +324,6 @@ function fetchDashboardMetrics() {
         .then(response => response.json())
         .then(data => {
             // Actualizar los valores del DOM para los gauges
-            // Solo si estamos en la página principal (no en las páginas de métricas)
             const currentPath = window.location.pathname;
             if (!currentPath.includes('metrica_')) {
                 updateGaugeValue('gaugeAtencion', data.attendance_rate || 0);
@@ -373,24 +332,24 @@ function fetchDashboardMetrics() {
                 updateGaugeValue('gaugeConversaciones', data.attendance_rate || 0);
             }
 
-            // Actualizar métricas de tiempo usando los nuevos campos
+            // Actualizar métricas de tiempo
             updateTimeMetric('tiempo-espera', data.average_wait_minutes || 0);
             updateTimeMetric('tiempo-respuesta', data.average_first_response_minutes || 0);
             updateTimeMetric('tiempo-duracion', data.average_duration_minutes || 0);
             
-            // Actualizar los contadores de conversaciones recibidas y atendidas
+            // Actualizar los contadores de conversaciones 
             updateConversationStats(data.total_conversations_received || 0, data.total_conversations_attended || 0);
             
             // Actualizar tabla de métricas de rendimiento
             updatePerformanceTable(
                 data.goal_achieved_count || 0,
-                50, // Suponiendo que el total de objetivos es 50
+                50, 
                 data.total_abandoned || 0,
                 data.total_conversations_received || 0,
                 data.abandonment_rate || 0
             );
             
-            // Inicializar los gráficos (ahora que los valores están en el DOM)
+            // Inicializar los gráficos
             initCharts();
         })
         .catch(error => {
@@ -411,7 +370,7 @@ function initGaugeChart(canvasId, color1, color2) {
     
     const ctx = canvas.getContext('2d');
     
-    // Obtener el valor del gauge del elemento hermano con clase gauge-value
+    // Obtener el valor del gauge del elemento hermano
     const valueElement = canvas.parentElement.querySelector('.gauge-value');
     const percentage = valueElement ? parseFloat(valueElement.textContent.replace('%', '').trim()) : 0;
 
@@ -432,7 +391,7 @@ function initGaugeChart(canvasId, color1, color2) {
                 data: [percentage, 100 - percentage],
                 backgroundColor: [
                     gradientColors,
-                    '#1a1e2c' // Color de fondo oscuro
+                    '#1a1e2c' 
                 ],
                 borderWidth: 0,
                 cutout: '75%'
@@ -457,13 +416,9 @@ function initGaugeChart(canvasId, color1, color2) {
             }
         }
     });
+    
     // Marcar este gauge como inicializado
     initializedGauges[canvasId] = true;
-    
-    // AÑADIR EL SÍMBOLO % AL VALOR DESPUÉS DE CREAR EL GRÁFICO
-    if (valueElement && !valueElement.textContent.includes('%')) {
-        valueElement.textContent = percentage + '%';
-    }
     
     // Hacer el gauge clickeable
     canvas.style.cursor = 'pointer';
@@ -493,7 +448,6 @@ function initGaugeChart(canvasId, color1, color2) {
 }
 
 // Función para actualizar las estadísticas de conversaciones
-
 function updateConversationStats(received, attended) {
     const statBoxes = document.querySelectorAll('.stat-box');
     
@@ -511,25 +465,9 @@ function updateConversationStats(received, attended) {
             }
         }
     });
-
-    // Si el método 1 falla por algún motivo, 
-    // buscar directamente por el encabezado y actualizar el valor asociado
-    if (!statBoxes.length) {
-        document.querySelectorAll('h3').forEach(h3 => {
-            const text = h3.textContent.trim();
-            if (text === 'Recibidas' || text === 'Atendidas') {
-                const parent = h3.parentElement;
-                const valueElement = parent.querySelector('.stat-value');
-                if (valueElement) {
-                    valueElement.textContent = text === 'Recibidas' ? received : attended;
-                }
-            }
-        });
-    }
 }
 
 // Función para actualizar el valor del gauge
-// Esta función se llama desde el gráfico de barras y también desde el gráfico de líneas
 function updateGaugeValue(canvasId, value) {
     const canvas = document.getElementById(canvasId);
     
@@ -558,7 +496,7 @@ function updateTimeMetric(metricId, value) {
     }
 }
 
-// Función para actualizar metricas de rendimiento en el dashboard principal
+// Función para actualizar métricas de rendimiento en el dashboard principal
 function updatePerformanceTable(goalsAchieved, totalGoals, abandonedConversations, totalConversations, abandonmentRate) {
     // Actualizar el primer elemento de la tabla (Objetivos Alcanzados)
     const objectivesRow = document.querySelector('.performance-table tbody tr:first-child');
@@ -601,106 +539,4 @@ function updatePerformanceTable(goalsAchieved, totalGoals, abandonedConversation
             percentageSpan.textContent = `${abandonmentRate.toFixed(2)}%`;
         }
     }
-}
-
-
-// Funciones auxiliares para fechas
-function getFirstDayOfMonth() {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-}
-
-function getLastDayOfMonth() {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-}
-
-
-// Función para actualizar la tabla de rendimiento por agente
-function updateAgentPerformanceTable(data) {
-    const tableBody = document.querySelector('.agent-performance-table tbody');
-    
-    // Limpiar tabla
-    tableBody.innerHTML = '';
-    
-    // Si no hay datos, mostrar mensaje
-    if (!data || !Array.isArray(data) || data.length === 0) {
-        const row = document.createElement('tr');
-        row.innerHTML = '<td colspan="6" class="empty-message">No hay datos disponibles para mostrar</td>';
-        tableBody.appendChild(row);
-        return;
-    }
-    
-    // Ordenar agentes por número de chats atendidos (descendente)
-    data.sort((a, b) => {
-        const aAttended = parseInt(a.chats_attended || 0);
-        const bAttended = parseInt(b.chats_attended || 0);
-        return bAttended - aAttended;
-    });
-    
-    // Agregar filas a la tabla
-    data.forEach(agent => {
-        const row = document.createElement('tr');
-        
-        // Calcular tasa de atención
-        const chatsReceived = parseInt(agent.chats_received || 0);
-        const chatsAttended = parseInt(agent.chats_attended || 0);
-        const attendanceRate = chatsReceived > 0 ? (chatsAttended / chatsReceived) * 100 : 0;
-        
-        // Formatear tiempos
-        const responseTime = formatMinutes(agent.avg_response_time);
-        const duration = formatMinutes(agent.avg_duration);
-        
-        // Crear HTML para la fila
-        row.innerHTML = `
-            <td data-label="Agente">${agent.agent_name || agent.agent_email || 'Sin nombre'}</td>
-            <td data-label="Chats Recibidos">${chatsReceived}</td>
-            <td data-label="Chats Atendidos">${chatsAttended}</td>
-            <td data-label="Tasa de Atención">${attendanceRate.toFixed(2)}%</td>
-            <td data-label="Tiempo de Respuesta">${responseTime} min</td>
-            <td data-label="Duración Promedio">${duration} min</td>
-        `;
-        
-        tableBody.appendChild(row);
-    });
-}
-
-// Función para cargar datos de rendimiento de agentes
-function loadAgentPerformanceData(startDate, endDate) {
-    
-    const url = `includes/get_metrics.php?action=agent_performance&start_date=${startDate}&end_date=${endDate}`;
-    
-    fetch(url)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Error HTTP: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            
-            // Verificar estructura de datos
-            const agentData = Array.isArray(data?.agents) ? data.agents : Array.isArray(data) ? data : [];
-
-            // Actualizar tabla con los datos
-            updateAgentPerformanceTable(agentData);
-        })
-        .catch(error => {
-            updateAgentPerformanceTable([]); // Mostrar tabla vacía en caso de error
-        });
-}
-
-// Función para inicializar la tabla de rendimiento de agentes
-function initAgentPerformanceTable() {
-    const tableContainer = document.querySelector('.agent-table-container');
-    
-    // Obtener fechas del filtro o usar valores predeterminados
-    const startDateInput = document.getElementById('inicio');
-    const endDateInput = document.getElementById('fin');
-    
-    const startDate = startDateInput ? startDateInput.value : getFirstDayOfMonth();
-    const endDate = endDateInput ? endDateInput.value : getLastDayOfMonth();
-    
-    // Cargar datos con las fechas
-    loadAgentPerformanceData(startDate, endDate);
 }
