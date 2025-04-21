@@ -1,9 +1,6 @@
 // Variable global para guardar referencias a los gráficos
 var chartInstances = {};
 
-// Variable global para rastrear qué gauges ya se han inicializado
-var initializedGauges = {};
-
 // Inicializar gráficos cuando la página esté lista
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializar gráficos
@@ -164,9 +161,9 @@ function updateHourlyChart(labels, values, noData = false) {
     if (!canvas) return;
     
     // Si el gráfico ya existe, destruirlo
-    if (chartInstances['hourlyCharts']) {
-        chartInstances['hourlyCharts'].destroy();
-        chartInstances['hourlyCharts'] = null;
+    if (chartInstances['hourlyChats']) {
+        chartInstances['hourlyChats'].destroy();
+        chartInstances['hourlyChats'] = null;
     }
     
     const ctx = canvas.getContext('2d');
@@ -187,7 +184,7 @@ function updateHourlyChart(labels, values, noData = false) {
     const suggestedMax = Math.ceil(maxValue * 1.2); // 20% más alto que el valor máximo
     
     // Configurar y crear el gráfico
-    chartInstances['hourlyCharts'] = new Chart(ctx, {
+    chartInstances['hourlyChats'] = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
@@ -309,6 +306,10 @@ function initHourlyChart() {
                 updateHourlyChart(data.labels, data.values, !hasData);
             }
         })
+        .catch(error => {
+            console.error("Error cargando datos por hora:", error);
+            updateHourlyChart([], [], true);
+        });
 }
 
 // Función para obtener métricas del dashboard
@@ -353,9 +354,25 @@ function fetchDashboardMetrics() {
             initCharts();
         })
         .catch(error => {
+            console.error("Error cargando métricas del dashboard:", error);
             // Inicializar con valores predeterminados en caso de error
             initCharts();
         });
+}
+
+// Función para crear una redirección a la página de métrica correspondiente
+function redirectToMetricPage(metricType) {
+    switch(metricType) {
+        case 'gaugeAtencion':
+            window.location.href = 'metrica_atencion.php';
+            break;
+        case 'gaugeOportunidad':
+            window.location.href = 'metrica_oportunidad.php';
+            break;
+        case 'gaugeAbandono':
+            window.location.href = 'metrica_abandono.php';
+            break;
+    }
 }
 
 // Función para inicializar gráficos de tipo gauge
@@ -417,33 +434,21 @@ function initGaugeChart(canvasId, color1, color2) {
         }
     });
     
-    // Marcar este gauge como inicializado
-    initializedGauges[canvasId] = true;
-    
-    // Hacer el gauge clickeable
-    canvas.style.cursor = 'pointer';
-    canvas.addEventListener('click', function() {
-        if (canvasId === 'gaugeAtencion') {
-            window.location.href = 'metrica_atencion.php';
-        } else if (canvasId === 'gaugeOportunidad') {
-            window.location.href = 'metrica_oportunidad.php';
-        } else if (canvasId === 'gaugeAbandono') {
-            window.location.href = 'metrica_abandono.php';
-        }
-    });
-    
-    // También hacer clic en el valor para redirigir
-    if (valueElement) {
-        valueElement.style.cursor = 'pointer';
-        valueElement.addEventListener('click', function() {
-            if (canvasId === 'gaugeAtencion') {
-                window.location.href = 'metrica_atencion.php';
-            } else if (canvasId === 'gaugeOportunidad') {
-                window.location.href = 'metrica_oportunidad.php';
-            } else if (canvasId === 'gaugeAbandono') {
-                window.location.href = 'metrica_abandono.php';
-            }
+    // Solo agregar redirección si es un gauge interactivo
+    if (canvasId === 'gaugeAtencion' || canvasId === 'gaugeOportunidad' || canvasId === 'gaugeAbandono') {
+        // Hacer el gauge clickeable
+        canvas.style.cursor = 'pointer';
+        canvas.addEventListener('click', function() {
+            redirectToMetricPage(canvasId);
         });
+        
+        // También hacer clic en el valor para redirigir
+        if (valueElement) {
+            valueElement.style.cursor = 'pointer';
+            valueElement.addEventListener('click', function() {
+                redirectToMetricPage(canvasId);
+            });
+        }
     }
 }
 
@@ -470,6 +475,7 @@ function updateConversationStats(received, attended) {
 // Función para actualizar el valor del gauge
 function updateGaugeValue(canvasId, value) {
     const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
     
     // Asegurar que el valor sea numérico y no NaN
     const numValue = parseFloat(value);
@@ -484,6 +490,7 @@ function updateGaugeValue(canvasId, value) {
 // Función para modificar las métricas de tiempo
 function updateTimeMetric(metricId, value) {
     const element = document.getElementById(metricId);
+    if (!element) return;
     
     // Buscar el elemento span con clase time-value dentro del elemento
     const valueElement = element.querySelector('.time-value');

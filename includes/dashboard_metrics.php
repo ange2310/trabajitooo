@@ -1,4 +1,11 @@
 <?php
+/**
+    *Proporciona métricas de dashboard en formato JSON
+ *  sirve como punto de acceso para obtener métricas del dashboard
+ * con base en una fecha específica. Devuelve una respuesta JSON con los valores
+ * de las métricas o valores predeterminados si no hay datos disponibles.
+ */
+
 // Establecer encabezado para JSON
 header('Content-Type: application/json');
 
