@@ -470,10 +470,6 @@ ul {
     transition: width var(--transition-normal);
 }
 
-.progress-bar.red {
-    background-color: var(--primary-red);
-}
-
 .progress-container span {
     position: absolute;
     right: 0;

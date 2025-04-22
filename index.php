@@ -196,7 +196,7 @@ include_once 'includes/header.php';
                                     <td><?php echo $metricas['objetivos_cantidad']; ?></td>
                                     <td>
                                         <div class="progress-container">
-                                            <div class="progress-bar" style="width: <?php echo $metricas['objetivos_porcentaje']; ?>%"></div>
+                                            <div class="progress-bar" style="width: <?php echo $metricas['objetivos_porcentaje']; ?>%; background-color: #3b82f6;"></div>
                                             <span><?php echo number_format($metricas['objetivos_porcentaje'], 2); ?>%</span>
                                         </div>
                                     </td>
@@ -206,7 +206,7 @@ include_once 'includes/header.php';
                                     <td><?php echo $metricas['abandonadas_cantidad']; ?></td>
                                     <td>
                                         <div class="progress-container">
-                                            <div class="progress-bar red" style="width: <?php echo $metricas['abandono']; ?>%"></div>
+                                            <div class="progress-bar red" style="width: <?php echo $metricas['abandono']; ?>%; background-color: #ef4444;"></div>
                                             <span><?php echo number_format($metricas['abandono'], 2); ?>%</span>
                                         </div>
                                     </td>
