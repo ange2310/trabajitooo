@@ -1,12 +1,5 @@
 /* ===== Variables y Reset ===== */
 :root {
-    /* Colores primarios */
-    --primary-purple: #a855f7;
-    --primary-yellow: #eab308;
-    --primary-red: #ef4444;
-    --primary-green: #10b981;
-    --primary-blue: #3b82f6;
-    
     /* Colores de fondo */
     --bg-dark: #0f172a;
     --bg-darker: #070b15;
@@ -17,13 +10,6 @@
     --text-light: #f8fafc;
     --text-muted: #94a3b8;
     --text-dark: #1e293b;
-    
-    /* Gradientes mejorados */
-    --gradient-purple: linear-gradient(135deg, #4F46E5 0%, #8B5CF6 100%);
-    --gradient-yellow: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
-    --gradient-red: linear-gradient(135deg, #EF4444 0%, #F87171 100%);
-    --gradient-brown: linear-gradient(135deg, #78350F 0%, #B45309 100%);
-    --gradient-dark-blue: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);
     
     /* Espaciado */
     --spacing-xs: 0.25rem;
@@ -315,30 +301,6 @@ ul {
     flex-basis: 100%;
 }
 
-/* Gradient backgrounds */
-.purple-gradient {
-    background: var(--gradient-purple);
-}
-
-.yellow-gradient {
-    background: var(--gradient-yellow);
-}
-
-.red-gradient {
-    background: var(--gradient-red);
-}
-
-.brown-gradient {
-    background: linear-gradient(135deg, #713f12 0%, #855a23 100%);
-}
-
-.dark-blue-gradient {
-    background: var(--gradient-dark-blue);
-}
-
-.purple-dark-gradient {
-    background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
-}
 
 /* ===== Gauge Charts ===== */
 .gauge-container {

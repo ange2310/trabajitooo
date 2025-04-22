@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Función principal para inicializar todos los gráficos
+// Función principal para inicializar todos los gráficos
 function initCharts() {
     // Verificar qué página estamos viendo para evitar inicializaciones duplicadas
     const currentPath = window.location.pathname;
@@ -18,23 +19,23 @@ function initCharts() {
     // Inicializar solo si el elemento existe y estamos en la página adecuada
     const gaugeAtencion = document.getElementById('gaugeAtencion');
     if (gaugeAtencion && !isMetricaAtencion) {
-        initGaugeChart('gaugeAtencion', '#9933ff', '#3366ff');
+        initGaugeChart('gaugeAtencion', '#9933ff');
     }
     
     const gaugeOportunidad = document.getElementById('gaugeOportunidad');
     if (gaugeOportunidad && !isMetricaOportunidad) {
-        initGaugeChart('gaugeOportunidad', '#ffcc00', '#ff9900');
+        initGaugeChart('gaugeOportunidad', '#ffcc00');
     }
     
     const gaugeAbandono = document.getElementById('gaugeAbandono');
     if (gaugeAbandono && !isMetricaAbandono) {
-        initGaugeChart('gaugeAbandono', '#ff3366', '#ff0000');
+        initGaugeChart('gaugeAbandono', '#ff3366');
     }
     
     // El gauge de conversaciones solo existe en la página principal
     const gaugeConversaciones = document.getElementById('gaugeConversaciones');
     if (gaugeConversaciones) {
-        initGaugeChart('gaugeConversaciones', '#4338ca', '#6d28d9');
+        initGaugeChart('gaugeConversaciones', '#4338ca');
     }
     
     // Inicializar gráfico de barras para métricas de tiempo
@@ -71,18 +72,12 @@ function initTimeMetricsChart() {
     
     const labels = ['Tiempo de Espera', 'Tiempo de Respuesta', 'Duración Conversación'];
     
-    // Crear gradientes
-    const gradientColors1 = ctx.createLinearGradient(0, 0, 0, 150);
-    gradientColors1.addColorStop(0, '#f97316');
-    gradientColors1.addColorStop(1, '#fb923c');
-    
-    const gradientColors2 = ctx.createLinearGradient(0, 0, 0, 150);
-    gradientColors2.addColorStop(0, '#ec4899');
-    gradientColors2.addColorStop(1, '#f9a8d4');
-    
-    const gradientColors3 = ctx.createLinearGradient(0, 0, 0, 150);
-    gradientColors3.addColorStop(0, '#8b5cf6');
-    gradientColors3.addColorStop(1, '#a78bfa');
+    // Colores sólidos para cada barra
+    const solidColors = [
+        '#f97316', // Naranja para Tiempo de Espera
+        '#ec4899', // Rosa para Tiempo de Respuesta
+        '#8b5cf6'  // Púrpura para Duración Conversación
+    ];
     
     // Configurar y crear el gráfico
     chartInstances['timeMetrics'] = new Chart(ctx, {
@@ -91,11 +86,7 @@ function initTimeMetricsChart() {
             labels: labels,
             datasets: [{
                 data: values,
-                backgroundColor: [
-                    gradientColors1,
-                    gradientColors2,
-                    gradientColors3
-                ],
+                backgroundColor: solidColors,
                 borderWidth: 0,
                 borderRadius: 5,
                 barPercentage: 0.5,
@@ -174,10 +165,9 @@ function updateHourlyChart(labels, values, noData = false) {
         values = Array(24).fill(0);
     }
     
-    // Crear gradiente para el área bajo la línea
-    const gradientColors = ctx.createLinearGradient(0, 0, 0, 200);
-    gradientColors.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
-    gradientColors.addColorStop(1, 'rgba(59, 130, 246, 0)');
+    // Color sólido para el área bajo la línea
+    const solidAreaColor = 'rgba(59, 130, 246, 0.3)'; // Azul semi-transparente
+    const solidLineColor = '#3b82f6'; // Azul sólido para la línea
     
     // Calcular un valor máximo sugerido basado en los datos
     const maxValue = Math.max(...values, 1);
@@ -191,9 +181,9 @@ function updateHourlyChart(labels, values, noData = false) {
             datasets: [{
                 label: 'Conversaciones',
                 data: values,
-                borderColor: '#3b82f6',
-                backgroundColor: gradientColors,
-                pointBackgroundColor: '#3b82f6',
+                borderColor: solidLineColor,
+                backgroundColor: solidAreaColor,
+                pointBackgroundColor: solidLineColor,
                 pointBorderColor: '#fff',
                 pointRadius: 4,
                 pointHoverRadius: 6,
@@ -298,32 +288,119 @@ function initHourlyChart() {
     // Hacer la solicitud directa
     const url = `includes/conexion_api.php?action=hourly_stats&fecha=${fecha}&t=${timestamp}`;
     
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            if (data && data.labels && data.values) {
-                const hasData = data.values.some(v => v > 0);
-                updateHourlyChart(data.labels, data.values, !hasData);
+    // Usando XMLHttpRequest en lugar de fetch para evitar problemas con JSON.parse
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                try {
+                    // Intentar parsear la respuesta como JSON
+                    const responseText = xhr.responseText;
+                    
+                    // Verificar si hay contenido
+                    if (responseText && responseText.trim()) {
+                        const data = JSON.parse(responseText);
+                        if (data && data.labels && data.values) {
+                            const hasData = data.values.some(v => v > 0);
+                            updateHourlyChart(data.labels, data.values, !hasData);
+                        } else {
+                            // Datos incompletos
+                            updateHourlyChart([], [], true);
+                        }
+                    } else {
+                        // Respuesta vacía
+                        console.warn("Respuesta vacía del servidor para datos por hora");
+                        updateHourlyChart([], [], true);
+                    }
+                } catch (e) {
+                    // Error al parsear JSON
+                    console.error("Error al parsear JSON de datos por hora:", e);
+                    updateHourlyChart([], [], true);
+                }
+            } else {
+                // Error HTTP
+                console.error("Error HTTP al obtener datos por hora:", xhr.status);
+                updateHourlyChart([], [], true);
             }
-        })
-        .catch(error => {
-            console.error("Error cargando datos por hora:", error);
-            updateHourlyChart([], [], true);
-        });
+        }
+    };
+    
+    xhr.onerror = function() {
+        console.error("Error de red al obtener datos por hora");
+        updateHourlyChart([], [], true);
+    };
+    
+    try {
+        xhr.send();
+    } catch (e) {
+        console.error("Error al enviar solicitud de datos por hora:", e);
+        updateHourlyChart([], [], true);
+    }
 }
 
 // Función para obtener métricas del dashboard
+// Función alternativa para obtener métricas del dashboard
 function fetchDashboardMetrics() {
+    // Crear un objeto con valores predeterminados
+    const defaultData = {
+        attendance_rate: 0,
+        opportunity_rate: 0,
+        abandonment_rate: 0,
+        average_wait_minutes: 0,
+        average_first_response_minutes: 0,
+        average_duration_minutes: 0,
+        total_conversations_received: 0,
+        total_conversations_attended: 0,
+        goal_achieved_count: 0,
+        total_abandoned: 0
+    };
+    
     // Obtener la fecha del parámetro URL si existe
     const urlParams = new URLSearchParams(window.location.search);
     const fecha = urlParams.get('fecha') || '';
     
-    // Construir la URL con el parámetro de fecha
-    const url = 'includes/dashboard_metrics.php' + (fecha ? `?fecha=${fecha}` : '');
+    // Añadir timestamp para evitar problemas de caché
+    const timestamp = new Date().getTime();
     
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
+    // Construir la URL con el parámetro de fecha y timestamp
+    const url = 'includes/dashboard_metrics.php' + 
+               (fecha ? `?fecha=${fecha}&t=${timestamp}` : `?t=${timestamp}`);
+    
+    // Crear un nuevo XMLHttpRequest (método alternativo a fetch)
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    
+    // Configurar la función de callback para cuando la solicitud se complete
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) { // Solicitud completada
+            let data = defaultData; // Usar valores predeterminados por defecto
+            
+            if (xhr.status === 200) { // Éxito
+                // Obtener el texto de respuesta
+                const responseText = xhr.responseText;
+                
+                // Verificar si la respuesta no está vacía
+                if (responseText && responseText.trim()) {
+                    try {
+                        // Intentar parsear como JSON
+                        const jsonData = JSON.parse(responseText);
+                        // Si el parseo es exitoso, usar esos datos
+                        data = jsonData;
+                        console.log("Datos cargados correctamente:", data);
+                    } catch (e) {
+                        // Error al parsear JSON
+                        console.error("Error al parsear JSON:", e);
+                        console.error("Texto recibido:", responseText);
+                    }
+                } else {
+                    console.warn("Respuesta vacía del servidor");
+                }
+            } else {
+                console.error("Error HTTP:", xhr.status);
+            }
+            
             // Actualizar los valores del DOM para los gauges
             const currentPath = window.location.pathname;
             if (!currentPath.includes('metrica_')) {
@@ -352,12 +429,24 @@ function fetchDashboardMetrics() {
             
             // Inicializar los gráficos
             initCharts();
-        })
-        .catch(error => {
-            console.error("Error cargando métricas del dashboard:", error);
-            // Inicializar con valores predeterminados en caso de error
-            initCharts();
-        });
+        }
+    };
+    
+    // Configurar manejo de errores en la solicitud
+    xhr.onerror = function() {
+        console.error("Error de red al cargar métricas del dashboard");
+        // Inicializar con valores predeterminados en caso de error
+        initCharts();
+    };
+    
+    // Enviar la solicitud
+    try {
+        xhr.send();
+    } catch (e) {
+        console.error("Error al enviar la solicitud:", e);
+        // Inicializar con valores predeterminados en caso de error
+        initCharts();
+    }
 }
 
 // Función para crear una redirección a la página de métrica correspondiente
@@ -376,7 +465,7 @@ function redirectToMetricPage(metricType) {
 }
 
 // Función para inicializar gráficos de tipo gauge
-function initGaugeChart(canvasId, color1, color2) {
+function initGaugeChart(canvasId, color) {
     const canvas = document.getElementById(canvasId);
     
     // Destruir el gráfico existente si existe
@@ -394,21 +483,41 @@ function initGaugeChart(canvasId, color1, color2) {
     if (valueElement) {
         valueElement.textContent = percentage + '%';
     }
-
-    // Crear gradiente
-    const gradientColors = ctx.createLinearGradient(0, 0, 0, 150);
-    gradientColors.addColorStop(0, color1);
-    gradientColors.addColorStop(1, color2);
     
-    // Configurar y crear el gráfico
+    // Determinar el color actual a usar (asegurarse que sea un color sólido)
+    // Ignorar cualquier segundo color (color2) que se haya pasado
+    let solidColor = color;
+    
+    // Asegurarse de que no estamos usando un objeto gradiente
+    if (typeof solidColor === 'object' && solidColor !== null) {
+        // Si por alguna razón recibimos un objeto gradiente, usar un color predeterminado
+        switch(canvasId) {
+            case 'gaugeAtencion':
+                solidColor = '#9933ff'; // Púrpura
+                break;
+            case 'gaugeOportunidad':
+                solidColor = '#ffcc00'; // Amarillo
+                break;
+            case 'gaugeAbandono':
+                solidColor = '#ff3366'; // Rosa
+                break;
+            case 'gaugeConversaciones':
+                solidColor = '#4338ca'; // Índigo
+                break;
+            default:
+                solidColor = '#3b82f6'; // Azul predeterminado
+        }
+    }
+    
+    // Configurar y crear el gráfico con color sólido (sin gradiente)
     chartInstances[canvasId] = new Chart(ctx, {
         type: 'doughnut',
         data: {
             datasets: [{
                 data: [percentage, 100 - percentage],
                 backgroundColor: [
-                    gradientColors,
-                    '#1a1e2c' 
+                    solidColor, // Color sólido garantizado
+                    '#1a1e2c'   // Color de fondo
                 ],
                 borderWidth: 0,
                 cutout: '75%'
@@ -451,7 +560,6 @@ function initGaugeChart(canvasId, color1, color2) {
         }
     }
 }
-
 // Función para actualizar las estadísticas de conversaciones
 function updateConversationStats(received, attended) {
     const statBoxes = document.querySelectorAll('.stat-box');

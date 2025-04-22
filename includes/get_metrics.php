@@ -698,8 +698,6 @@ function obtener_metricas_dashboard($date = null) {
     }
 }
 
-function procesar_metricas($metricas){
-    return $metricas;
-}
+
 
 ?>

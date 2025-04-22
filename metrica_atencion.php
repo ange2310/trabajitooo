@@ -89,7 +89,7 @@ include_once 'includes/header.php';
             </div>
             
             <!-- Resumen de métricas -->
-            <div class="dashboard-card purple-gradient">
+            <div class="dashboard-card">
                 <h2>Tasa de Atención</h2>
                 <div class="gauge-container">
                     <canvas id="gaugeAtencion"></canvas>

@@ -53,8 +53,6 @@ try {
     
     $config_dashboard = obtener_configuracion_dashboard();
 
-    // Procesar datos para usar en los gráficos
-    $metricas = procesar_metricas($metricas);
 } catch (Exception $e) {
     // Si hay un error con la API, mostrar mensaje
     $error_api = "Error al conectar con la API: " . $e->getMessage();
@@ -92,7 +90,7 @@ include_once 'includes/header.php';
                 <!-- Fila superior -->
                 <div class="dashboard-row">
                     <!-- Tasa de Atención -->
-                    <div class="dashboard-card purple-gradient">
+                    <div class="dashboard-card">
                         <h2>Tasa de Atención</h2>
                         <div class="gauge-container">
                             <canvas id="gaugeAtencion"></canvas>
@@ -102,7 +100,7 @@ include_once 'includes/header.php';
                     </div>
                     
                     <!-- Tasa de Oportunidad -->
-                    <div class="dashboard-card yellow-gradient">
+                    <div class="dashboard-card">
                         <h2>Tasa de Oportunidad</h2>
                         <div class="gauge-container">
                             <canvas id="gaugeOportunidad"></canvas>
@@ -112,7 +110,7 @@ include_once 'includes/header.php';
                     </div>
                     
                     <!-- Métricas de Tiempo -->
-                    <div class="dashboard-card wide-card brown-gradient">
+                    <div class="dashboard-card wide-card">
                         <h2>Métricas de Tiempo (Minutos)</h2>
                         <div class="time-metrics-container">
                             <canvas id="timeMetrics"></canvas>
@@ -138,7 +136,7 @@ include_once 'includes/header.php';
                 <!-- Fila media -->
                 <div class="dashboard-row">
                     <!-- Tasa de Abandono -->
-                    <div class="dashboard-card red-gradient">
+                    <div class="dashboard-card">
                         <h2>Tasa de Abandono</h2>
                         <div class="gauge-container">
                             <canvas id="gaugeAbandono"></canvas>
@@ -149,7 +147,7 @@ include_once 'includes/header.php';
                     </div>
                     
                     <!-- Conversaciones -->
-                    <div class="dashboard-card purple-dark-gradient">
+                    <div class="dashboard-card">
                         <h2>Conversaciones</h2>
                         <div class="conversations-container">
                             <div class="conversation-stats">
@@ -171,7 +169,7 @@ include_once 'includes/header.php';
                     </div>
                     
                     <!-- Conversaciones por Hora -->
-                    <div class="dashboard-card wide-card brown-gradient">
+                    <div class="dashboard-card wide-card">
                         <h2>Conversaciones por Hora</h2>
                         <div class="chart-container">
                             <canvas id="hourlyChats"></canvas>
@@ -182,7 +180,7 @@ include_once 'includes/header.php';
                 <!-- Fila inferior -->
                 <div class="dashboard-row">
                     <!-- Métricas de Rendimiento -->
-                    <div class="dashboard-card full-width dark-blue-gradient">
+                    <div class="dashboard-card full-width">
                         <h2>Métricas de Rendimiento</h2>
                         <table class="performance-table">
                             <thead>
