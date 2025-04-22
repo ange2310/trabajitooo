@@ -1,6 +1,43 @@
 <?php
 
 session_start();
+// Gestionar fecha seleccionada utilizando sesiones PHP
+if (isset($_GET['fecha'])) {
+    // Si se proporciona una fecha en la URL, guardarla en sesión
+    $fecha_seleccionada = $_GET['fecha'];
+    
+    // Validar formato de fecha
+    $date_parts = explode('-', $fecha_seleccionada);
+    if (count($date_parts) === 3 && checkdate($date_parts[1], $date_parts[2], $date_parts[0])) {
+        // Si la fecha es válida, guardarla en sesión
+        $_SESSION['dashboard_fecha'] = $fecha_seleccionada;
+    }
+    
+    // Usar la fecha de la URL (ya validada por el código existente)
+    $fecha = $fecha_seleccionada;
+} else {
+    // Si no hay fecha en la URL, buscar en la sesión
+    if (isset($_SESSION['dashboard_fecha'])) {
+        $fecha = $_SESSION['dashboard_fecha'];
+    } else {
+        // Si no hay fecha en sesión, usar fecha actual
+        $fecha = date('Y-m-d');
+        // Guardar la fecha actual en sesión
+        $_SESSION['dashboard_fecha'] = $fecha;
+    }
+    
+    // Redirigir a la misma página pero con el parámetro fecha
+    // Solo si estamos en index.php y no viene de otra redirección
+    if (basename($_SERVER['PHP_SELF']) == 'index.php' && 
+        !isset($_SESSION['redirect_lock'])) {
+        $_SESSION['redirect_lock'] = true;
+        header("Location: index.php?fecha=$fecha");
+        exit;
+    }
+}
+
+// Limpiar bloqueo de redirección
+$_SESSION['redirect_lock'] = false;
 
 // Incluir archivos necesarios
 require_once 'config/config.php';
@@ -17,9 +54,6 @@ if (!isset($_SESSION['token']) || empty($_SESSION['token'])) {
 $metricas = [];
 $config_dashboard = [];
 $conversaciones_por_hora = [];
-
-// Obtener la fecha actual o la seleccionada por el usuario
-$fecha = isset($_GET['fecha']) ? $_GET['fecha'] : date('Y-m-d');
 
 // Fechas para el rango (por defecto el mes actual)
 $inicio_mes = date('Y-m-01');

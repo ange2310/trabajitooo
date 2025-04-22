@@ -1,6 +1,61 @@
 <?php
 session_start();
 
+// Si hay filtros específicos (inicio/fin/agent), dar prioridad a estos
+if (isset($_GET['inicio']) || isset($_GET['fin']) || isset($_GET['agent'])) {
+    $inicio = isset($_GET['inicio']) ? $_GET['inicio'] : date('Y-m-01');
+    $fin = isset($_GET['fin']) ? $_GET['fin'] : date('Y-m-t');
+    $agent_email = isset($_GET['agent']) ? $_GET['agent'] : null;
+    
+    // No guardar en sesión estos filtros específicos
+} 
+// Si viene con fecha desde el dashboard
+else if (isset($_GET['fecha'])) {
+    $fecha_dashboard = $_GET['fecha'];
+    
+    // Validar formato de fecha
+    $date_parts = explode('-', $fecha_dashboard);
+    if (count($date_parts) === 3 && checkdate($date_parts[1], $date_parts[2], $date_parts[0])) {
+        // Si la fecha es válida:
+        // 1. Guardarla en sesión para mantener consistencia
+        $_SESSION['dashboard_fecha'] = $fecha_dashboard;
+        // 2. Usar la misma fecha como inicio y fin
+        $inicio = $fecha_dashboard;
+        $fin = $fecha_dashboard;
+        $agent_email = null; // No filtrar por agente en este caso
+    } else {
+        // Si la fecha es inválida, usar valores predeterminados
+        $inicio = date('Y-m-01');
+        $fin = date('Y-m-t');
+        $agent_email = null;
+    }
+}
+// Si no hay parámetros pero hay fecha en sesión
+else if (isset($_SESSION['dashboard_fecha'])) {
+    // Usar la fecha guardada en sesión
+    $fecha_dashboard = $_SESSION['dashboard_fecha'];
+    $inicio = $fecha_dashboard;
+    $fin = $fecha_dashboard;
+    $agent_email = null; // No filtrar por agente en este caso
+    
+    // Redirigir a la misma página pero con el parámetro fecha
+    // para que sea explícito en la URL
+    if (!isset($_SESSION['redirect_lock'])) {
+        $_SESSION['redirect_lock'] = true;
+        header("Location: tables.php?fecha=$fecha_dashboard");
+        exit;
+    }
+}
+// Si no hay ni parámetros ni sesión
+else {
+    // Usar valores predeterminados
+    $inicio = date('Y-m-01');
+    $fin = date('Y-m-t');
+    $agent_email = null;
+}
+
+// Limpiar bloqueo de redirección
+$_SESSION['redirect_lock'] = false;
 // Incluir archivos necesarios
 require_once 'config/config.php';
 require_once 'includes/conexion_api.php';

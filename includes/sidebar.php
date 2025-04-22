@@ -9,32 +9,32 @@
         <!-- Menú principal -->
         <ul class="sidebar-menu">
             <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
-                <a href="index.php">
+                <a href="index.php<?php echo isset($_SESSION['dashboard_fecha']) ? '?fecha='.htmlspecialchars($_SESSION['dashboard_fecha']) : ''; ?>">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
             <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'tables.php' ? 'active' : ''; ?>">
-                <a href="tables.php">
+                <a href="tables.php<?php echo isset($_SESSION['dashboard_fecha']) ? '?fecha='.htmlspecialchars($_SESSION['dashboard_fecha']) : ''; ?>">
                     <i class="fas fa-table"></i>
                     <span>Tables</span>
                 </a>
             </li>
             <!-- Nuevos iconos para gauges -->
             <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'metrica_atencion.php' ? 'active' : ''; ?>">
-                <a href="metrica_atencion.php">
+                <a href="metrica_atencion.php<?php echo isset($_SESSION['dashboard_fecha']) ? '?fecha='.htmlspecialchars($_SESSION['dashboard_fecha']) : ''; ?>">
                     <i class="fas fa-headset"></i>
                     <span>Tasa de Atención</span>
                 </a>
             </li>
             <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'metrica_oportunidad.php' ? 'active' : ''; ?>">
-                <a href="metrica_oportunidad.php">
+                <a href="metrica_oportunidad.php<?php echo isset($_SESSION['dashboard_fecha']) ? '?fecha='.htmlspecialchars($_SESSION['dashboard_fecha']) : ''; ?>">
                     <i class="fas fa-clock"></i>
                     <span>Tasa de Oportunidad</span>
                 </a>
             </li>
             <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'metrica_abandono.php' ? 'active' : ''; ?>">
-                <a href="metrica_abandono.php">
+                <a href="metrica_abandono.php<?php echo isset($_SESSION['dashboard_fecha']) ? '?fecha='.htmlspecialchars($_SESSION['dashboard_fecha']) : ''; ?>">
                     <i class="fas fa-user-slash"></i>
                     <span>Tasa de Abandono</span>
                 </a>

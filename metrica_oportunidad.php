@@ -1,6 +1,60 @@
 <?php
 session_start();
 
+// Añadir al inicio de metrica_atencion.php, metrica_oportunidad.php y metrica_abandono.php
+// Justo después de session_start()
+
+// Si hay filtros específicos (inicio/fin), dar prioridad a estos
+if (isset($_GET['inicio']) || isset($_GET['fin'])) {
+    $inicio = isset($_GET['inicio']) ? $_GET['inicio'] : date('Y-m-01');
+    $fin = isset($_GET['fin']) ? $_GET['fin'] : date('Y-m-t');
+    
+    // No guardar en sesión estos filtros específicos
+} 
+// Si viene con fecha desde el dashboard
+else if (isset($_GET['fecha'])) {
+    $fecha_dashboard = $_GET['fecha'];
+    
+    // Validar formato de fecha
+    $date_parts = explode('-', $fecha_dashboard);
+    if (count($date_parts) === 3 && checkdate($date_parts[1], $date_parts[2], $date_parts[0])) {
+        // Si la fecha es válida:
+        // 1. Guardarla en sesión para mantener consistencia
+        $_SESSION['dashboard_fecha'] = $fecha_dashboard;
+        // 2. Usar la misma fecha como inicio y fin
+        $inicio = $fecha_dashboard;
+        $fin = $fecha_dashboard;
+    } else {
+        // Si la fecha es inválida, usar valores predeterminados
+        $inicio = date('Y-m-01');
+        $fin = date('Y-m-t');
+    }
+}
+// Si no hay parámetros pero hay fecha en sesión
+else if (isset($_SESSION['dashboard_fecha'])) {
+    // Usar la fecha guardada en sesión
+    $fecha_dashboard = $_SESSION['dashboard_fecha'];
+    $inicio = $fecha_dashboard;
+    $fin = $fecha_dashboard;
+    
+    // Redirigir a la misma página pero con el parámetro fecha
+    // para que sea explícito en la URL
+    if (!isset($_SESSION['redirect_lock'])) {
+        $_SESSION['redirect_lock'] = true;
+        $current_page = basename($_SERVER['PHP_SELF']);
+        header("Location: $current_page?fecha=$fecha_dashboard");
+        exit;
+    }
+}
+// Si no hay ni parámetros ni sesión
+else {
+    // Usar valores predeterminados
+    $inicio = date('Y-m-01');
+    $fin = date('Y-m-t');
+}
+
+// Limpiar bloqueo de redirección
+$_SESSION['redirect_lock'] = false;
 // Incluir archivos necesarios
 require_once 'config/config.php';
 require_once 'includes/conexion_api.php';
@@ -12,9 +66,6 @@ if (!isset($_SESSION['token']) || empty($_SESSION['token'])) {
     exit;
 }
 
-// Obtener parámetros de filtrado
-$inicio = isset($_GET['inicio']) ? $_GET['inicio'] : date('Y-m-01');
-$fin = isset($_GET['fin']) ? $_GET['fin'] : date('Y-m-t');
 
 // Obtener datos de rendimiento de agentes
 $rendimiento_agentes = obtener_rendimiento_agente($inicio, $fin);
@@ -119,6 +170,38 @@ include_once 'includes/header.php';
     <div class="content-wrapper">
         <div class="tables-container">
             <h1>Tasa de Oportunidad - Estadísticas Detalladas</h1>
+
+            <div class="dashboard-navigation">
+                <a href="index.php<?php echo isset($_SESSION['dashboard_fecha']) ? '?fecha='.htmlspecialchars($_SESSION['dashboard_fecha']) : ''; ?>" class="back-to-dashboard">
+                    <i class="fas fa-arrow-left"></i> Volver al Dashboard
+                </a>
+            </div>
+
+            <style>
+                .dashboard-navigation {
+                    margin-bottom: 20px;
+                }
+                
+                .back-to-dashboard {
+                    display: inline-flex;
+                    align-items: center;
+                    padding: 8px 15px;
+                    background-color: rgba(59, 130, 246, 0.1);
+                    border-radius: 6px;
+                    color: #3b82f6;
+                    font-weight: 500;
+                    transition: all 0.2s ease;
+                }
+                
+                .back-to-dashboard:hover {
+                    background-color: rgba(59, 130, 246, 0.2);
+                    transform: translateX(-5px);
+                }
+                
+                .back-to-dashboard i {
+                    margin-right: 8px;
+                }
+            </style>
             
             <!-- Filtros -->
             <div class="filter-card">
