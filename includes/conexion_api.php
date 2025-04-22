@@ -10,12 +10,15 @@ if (isset($_GET['action'])) {
         case 'hourly_stats':
             // Obtener fecha del parámetro GET explícitamente
             $fecha = isset($_GET['fecha']) ? $_GET['fecha'] : date('Y-m-d');
+            
+            // Registrar la fecha recibida para depuración
+            error_log("hourly_stats: Fecha solicitada: " . $fecha);
 
-
-             // Analizar el referer para ver qué fecha contiene
+            // Analizar el referer para ver qué fecha contiene
             if (!empty($_SERVER['HTTP_REFERER'])) {
                 $referer_params = [];
                 parse_str(parse_url($_SERVER['HTTP_REFERER'], PHP_URL_QUERY), $referer_params);
+                error_log("hourly_stats: Referer params: " . print_r($referer_params, true));
             }
             
             // Intentar obtener la fecha de múltiples fuentes
@@ -25,17 +28,43 @@ if (isset($_GET['action'])) {
             
             // Usar la fecha más confiable disponible
             $fecha = !empty($fecha_get) && $fecha_get !== 'no_fecha_get' ? $fecha_get : 
-                    (!empty($fecha_referer) && $fecha_referer !== 'no_fecha_referer' ? $fecha_referer : $fecha_default);
+                   (!empty($fecha_referer) && $fecha_referer !== 'no_fecha_referer' ? $fecha_referer : $fecha_default);
+            
+            error_log("hourly_stats: Fecha final utilizada: " . $fecha);
             
             try {
                 // IMPORTANTE: Pasar la misma fecha como start_date y end_date, y 'hour' como group_by
                 $datos = obtener_estadisticas_chat($fecha, $fecha, 'hour');
                 
+                // Registrar los datos recibidos para depuración
+                error_log("hourly_stats: Datos obtenidos: " . print_r($datos, true));
+                
                 // Procesar datos y devolver respuesta
                 $datos_procesados = procesar_datos_grafico_horas($datos);
                 
-                echo json_encode($datos_procesados);
+                // Si no hay datos, generar datos vacíos con estructura correcta
+                if (empty($datos_procesados) || !isset($datos_procesados['labels']) || !isset($datos_procesados['values'])) {
+                    $datos_procesados = [
+                        'labels' => array_map(function($h) { return sprintf("%02d:00", $h); }, range(0, 23)),
+                        'values' => array_fill(0, 24, 0)
+                    ];
+                }
+                
+                // Verificar que la respuesta JSON sea válida antes de enviarla
+                $json_response = json_encode($datos_procesados);
+                if ($json_response === false) {
+                    // Si hay un error en la codificación JSON, registrarlo y devolver datos vacíos
+                    error_log("hourly_stats: Error en json_encode: " . json_last_error_msg());
+                    $json_response = json_encode([
+                        'labels' => array_map(function($h) { return sprintf("%02d:00", $h); }, range(0, 23)),
+                        'values' => array_fill(0, 24, 0)
+                    ]);
+                }
+                
+                echo $json_response;
+                
             } catch (Exception $e) {
+                error_log("hourly_stats: Excepción atrapada: " . $e->getMessage());
                 echo json_encode([
                     'error' => $e->getMessage(),
                     'labels' => array_map(function($h) { return sprintf("%02d:00", $h); }, range(0, 23)),
