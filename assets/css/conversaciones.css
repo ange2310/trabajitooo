@@ -67,20 +67,3 @@
     color: #ffffff;
     z-index: 10;
 }
-
-/* Adaptaciones para móviles y tablets */
-@media (max-width: 768px) {
-    .conversations-container {
-        flex-direction: column;
-        gap: 20px;
-    }
-    
-    .conversation-stats, 
-    .conversation-gauge {
-        width: 100%;
-    }
-    
-    .conversation-gauge {
-        height: 150px !important;
-    }
-}

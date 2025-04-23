@@ -1,5 +1,9 @@
 <?php
-
+/**Página principal del dashboard
+ * Muestra widgets con las principales métricas
+ * Permite filtrar por fecha
+ * 
+ */
 session_start();
 // Gestionar fecha seleccionada utilizando sesiones PHP
 if (isset($_GET['fecha'])) {
@@ -254,20 +258,6 @@ include_once 'includes/header.php';
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Fecha seleccionada
-    const fecha = "<?php echo $fecha; ?>";
-    
-    // Cargar datos para el gráfico
-    if (typeof cargarDatosPorHora === 'function') {
-        // Dar tiempo para que se carguen todas las dependencias
-        setTimeout(function() {
-            cargarDatosPorHora();  // Llamar la función
-        }, 500);
-    }
-});
-</script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="assets/js/charts.js"></script>

@@ -98,7 +98,37 @@ include_once 'includes/header.php';
     <div class="content-wrapper">
         <div class="tables-container">
             <h1>Estadísticas Detalladas</h1>
-            
+            <div class="dashboard-navigation">
+                <a href="index.php<?php echo isset($_SESSION['dashboard_fecha']) ? '?fecha='.htmlspecialchars($_SESSION['dashboard_fecha']) : ''; ?>" class="back-to-dashboard">
+                    <i class="fas fa-arrow-left"></i> Volver al Dashboard
+                </a>
+            </div>
+
+            <style>
+                .dashboard-navigation {
+                    margin-bottom: 20px;
+                }
+                
+                .back-to-dashboard {
+                    display: inline-flex;
+                    align-items: center;
+                    padding: 8px 15px;
+                    background-color: rgba(59, 130, 246, 0.1);
+                    border-radius: 6px;
+                    color: #3b82f6;
+                    font-weight: 500;
+                    transition: all 0.2s ease;
+                }
+                
+                .back-to-dashboard:hover {
+                    background-color: rgba(59, 130, 246, 0.2);
+                    transform: translateX(-5px);
+                }
+                
+                .back-to-dashboard i {
+                    margin-right: 8px;
+                }
+            </style>
             <!-- Filtros -->
             <div class="filter-card">
                 <form method="GET" action="tables.php" class="filter-form">

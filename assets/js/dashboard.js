@@ -1,5 +1,5 @@
-// Código para reemplazar o agregar a dashboard.js
 
+//Este archivo maneja interactividad del dashboard. Controla el toggle del sidebar y funciones para persistencia de fecha seleccionada
 document.addEventListener('DOMContentLoaded', function() {
     const sidebar = document.querySelector('.sidebar');
     const contentWrapper = document.querySelector('.content-wrapper');
@@ -78,10 +78,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Inicializar según tamaño de pantalla
     handleResize();
+
+    // Configurar persistencia de fecha
+    setupDatePersistence();
     
+    // Configuración para mantener fechas en redirecciones
+    mantenerFechaEnRedirecciones();
+
     // Actualizar al cambiar tamaño de ventana
     window.addEventListener('resize', handleResize);
 });
+
 
 // Función para cargar datos por hora
 function cargarDatosPorHora() {
@@ -111,71 +118,13 @@ function cargarDatosPorHora() {
         })
 }
 
-// Función para configurar el listener del selector de fecha
-function setupDateListener() {
-    const fechaInput = document.getElementById('fecha');
-    
-    if (fechaInput) {
-        // Verificar si ya tiene el atributo onchange que hace submit
-        const tieneOnchange = fechaInput.hasAttribute('onchange');
-        
-        // Si tiene onchange que hace submit automático, modificar el comportamiento
-        if (tieneOnchange) {
-            // Guardar el formulario al que pertenece
-            const fechaForm = fechaInput.closest('form');
-            
-            // Remover el atributo onchange para evitar submit automático
-            fechaInput.removeAttribute('onchange');
-            
-            // Añadir un nuevo event listener
-            fechaInput.addEventListener('change', function() {
-                // Obtener la fecha seleccionada
-                const nuevaFecha = this.value;
-                
-                // Intentar actualizar gráficos con AJAX si la función está disponible
-                if (typeof loadDashboardData === 'function') {
-                    loadDashboardData(nuevaFecha);
-                    
-                    // Actualizar la URL sin recargar la página
-                    const newUrl = window.location.pathname + '?fecha=' + nuevaFecha;
-                    window.history.pushState({ fecha: nuevaFecha }, '', newUrl);
-                } else {
-                    // Si la función no está disponible, hacer submit del formulario
-                    if (fechaForm) {
-                        fechaForm.submit();
-                    }
-                }
-            });
-        }
-    }
-}
 
-// Manejar eventos de navegación (botones atrás/adelante)
-window.addEventListener('popstate', function(event) {
-    if (event.state && event.state.fecha) {
-        const fechaInput = document.getElementById('fecha');
-        if (fechaInput) {
-            fechaInput.value = event.state.fecha;
-            
-            // Cargar datos para la fecha restaurada
-            if (typeof loadDashboardData === 'function') {
-                loadDashboardData(event.state.fecha);
-            } else {
-                // Si no está disponible la función, hacer submit del formulario
-                const fechaForm = fechaInput.closest('form');
-                if (fechaForm) {
-                    fechaForm.submit();
-                }
-            }
-        }
-    }
-});
 // Función para manejar la persistencia de la fecha seleccionada
 function setupDatePersistence() {
     const fechaInput = document.getElementById('fecha');
     
     if (fechaInput) {
-        // 1. Al cargar la página, verificar si hay una fecha guardada
+        //Al cargar la página, verificar si hay una fecha guardada
         const storedDate = sessionStorage.getItem('dashboardDate');
         
         // Si hay una fecha guardada y es diferente a la actual en el input
@@ -210,7 +159,7 @@ function setupDatePersistence() {
         // Limpiar marca de redirección después de cargar
         sessionStorage.removeItem('redirecting');
         
-        // 2. Cuando el usuario cambia la fecha, guardarla
+        // Cuando el usuario cambia la fecha, guardarla
         fechaInput.addEventListener('change', function() {
             const newDate = this.value;
             // Guardar en sessionStorage
@@ -249,6 +198,7 @@ function setupDatePersistence() {
         });
     });
 }
+
 
 // Función para mantener la fecha al cambiar entre métricas específicas y dashboard
 function mantenerFechaEnRedirecciones() {
@@ -337,13 +287,4 @@ function mantenerFechaEnRedirecciones() {
     }
 }
 
-// Añadir las nuevas funciones a las inicializaciones
-document.addEventListener('DOMContentLoaded', function() {
-    // Otras inicializaciones existentes...
-    
-    // Configurar persistencia de fecha
-    setupDatePersistence();
-    
-    // Configuración para mantener fechas en redirecciones
-    mantenerFechaEnRedirecciones();
-});
+

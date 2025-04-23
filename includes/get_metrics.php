@@ -495,7 +495,7 @@ function preparar_tabla_agentes($datos) {
     return $tabla_datos;
 }
 
-
+// Configuración del sistema
 function obtener_configuracion_dashboard() {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
@@ -625,6 +625,7 @@ function actualizar_configuracion_dashboard($config = []) {
     return $data;
 }
 
+//Métricas principales para el dashboard
 function obtener_metricas_dashboard($date = null) {
     if (session_status() === PHP_SESSION_NONE) {
         session_start(); // Solo iniciar la sesión si no está activa
@@ -697,7 +698,5 @@ function obtener_metricas_dashboard($date = null) {
         return null;
     }
 }
-
-
 
 ?>

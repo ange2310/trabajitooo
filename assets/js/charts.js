@@ -1,3 +1,5 @@
+//Este archivo inicializa y actualiza los gráficos usando Chart.js
+
 // Variable global para guardar referencias a los gráficos
 var chartInstances = {};
 
@@ -7,7 +9,6 @@ document.addEventListener('DOMContentLoaded', function() {
     fetchDashboardMetrics(); // Cargamos datos reales y luego inicializamos charts
 });
 
-// Función principal para inicializar todos los gráficos
 // Función principal para inicializar todos los gráficos
 function initCharts() {
     // Verificar qué página estamos viendo para evitar inicializaciones duplicadas
@@ -270,14 +271,10 @@ function updateHourlyChart(labels, values, noData = false) {
     });
 }
 
-// Modificación para la función initHourlyChart en charts.js
-// Esta versión incluye más debugging y una solución para el caso de respuesta vacía
-
+// Función para inicializar el gráfico de conversaciones por hora
 function initHourlyChart() {
     const canvas = document.getElementById('hourlyChats');
     if (!canvas) return;
-    
-    console.log("Inicializando gráfico de conversaciones por hora");
     
     // Crear un gráfico vacío inicialmente
     updateHourlyChart([], [], true);
@@ -286,8 +283,6 @@ function initHourlyChart() {
     const urlParams = new URLSearchParams(window.location.search);
     const fecha = urlParams.get('fecha') || new Date().toISOString().split('T')[0];
     
-    console.log("Fecha para datos por hora:", fecha);
-    
     // Generar timestamp para evitar caché
     const timestamp = new Date().getTime();
     
@@ -295,13 +290,9 @@ function initHourlyChart() {
     // IMPORTANTE: Cambiar esto para usar directamente el archivo dashboard_metrics.php
     const url = `includes/dashboard_metrics.php?action=hourly_stats&fecha=${fecha}&t=${timestamp}`;
     
-    console.log("URL para datos por hora:", url);
-    
     // Usar fetch en lugar de XMLHttpRequest para simplificar
     fetch(url)
         .then(response => {
-            console.log("Respuesta recibida, status:", response.status);
-            
             if (!response.ok) {
                 throw new Error(`Error HTTP: ${response.status}`);
             }
@@ -309,12 +300,8 @@ function initHourlyChart() {
             return response.text();
         })
         .then(text => {
-            console.log("Texto de respuesta:", text);
-            
             // Si la respuesta está vacía, usar datos predeterminados
             if (!text || !text.trim()) {
-                console.log("Respuesta vacía, usando datos predeterminados");
-                
                 // Generar datos aleatorios para demostración
                 const labels = Array.from({length: 24}, (_, i) => `${String(i).padStart(2, '0')}:00`);
                 const values = Array.from({length: 24}, () => Math.floor(Math.random() * 5)); // Valores aleatorios entre 0 y 5
@@ -325,32 +312,27 @@ function initHourlyChart() {
             
             try {
                 const data = JSON.parse(text);
-                console.log("Datos parseados:", data);
                 
                 if (data && data.labels && data.values) {
                     const hasData = data.values.some(v => v > 0);
                     updateHourlyChart(data.labels, data.values, !hasData);
                 } else if (data && data.error) {
-                    console.warn("Error en los datos:", data.error);
                     // Generar datos vacíos con la estructura correcta
                     const emptyLabels = Array.from({length: 24}, (_, i) => `${String(i).padStart(2, '0')}:00`);
                     updateHourlyChart(emptyLabels, Array(24).fill(0), true);
                 } else {
-                    console.warn("Estructura de datos inesperada");
                     updateHourlyChart([], [], true);
                 }
             } catch (e) {
-                console.error("Error al parsear JSON:", e);
-                console.log("Texto que causó el error:", text);
                 updateHourlyChart([], [], true);
             }
         })
         .catch(error => {
-            console.error("Error al obtener datos por hora:", error);
             updateHourlyChart([], [], true);
         });
 }
-// Función alternativa para obtener métricas del dashboard
+
+// Función para obtener métricas del dashboard
 function fetchDashboardMetrics() {
     // Crear un objeto con valores predeterminados
     const defaultData = {
@@ -397,17 +379,10 @@ function fetchDashboardMetrics() {
                         const jsonData = JSON.parse(responseText);
                         // Si el parseo es exitoso, usar esos datos
                         data = jsonData;
-                        console.log("Datos cargados correctamente:", data);
                     } catch (e) {
-                        // Error al parsear JSON
-                        console.error("Error al parsear JSON:", e);
-                        console.error("Texto recibido:", responseText);
+                        // Si hay error en el parseo, se usarán los datos predeterminados
                     }
-                } else {
-                    console.warn("Respuesta vacía del servidor");
                 }
-            } else {
-                console.error("Error HTTP:", xhr.status);
             }
             
             // Actualizar los valores del DOM para los gauges
@@ -443,7 +418,6 @@ function fetchDashboardMetrics() {
     
     // Configurar manejo de errores en la solicitud
     xhr.onerror = function() {
-        console.error("Error de red al cargar métricas del dashboard");
         // Inicializar con valores predeterminados en caso de error
         initCharts();
     };
@@ -452,11 +426,11 @@ function fetchDashboardMetrics() {
     try {
         xhr.send();
     } catch (e) {
-        console.error("Error al enviar la solicitud:", e);
         // Inicializar con valores predeterminados en caso de error
         initCharts();
     }
 }
+
 
 // Función para crear una redirección a la página de métrica correspondiente
 function redirectToMetricPage(metricType) {
@@ -473,8 +447,6 @@ function redirectToMetricPage(metricType) {
     }
 }
 
-// Función para inicializar gráficos de tipo gauge
-// Reemplazar la función initGaugeChart con esta versión modificada:
 
 // Función para inicializar gráficos de tipo gauge
 function initGaugeChart(canvasId, color) {
@@ -521,15 +493,15 @@ function initGaugeChart(canvasId, color) {
         }
     }
     
-    // Configurar y crear el gráfico con color sólido (sin gradiente)
+    // Configurar y crear el gráfico con color sólido
     chartInstances[canvasId] = new Chart(ctx, {
         type: 'doughnut',
         data: {
             datasets: [{
                 data: [percentage, 100 - percentage],
                 backgroundColor: [
-                    solidColor, // Color sólido garantizado
-                    '#1a1e2c'   // Color de fondo
+                    solidColor, // Color del gauge
+                    '#1a1e2c'  // Color de fondo para la parte no ocupada
                 ],
                 borderWidth: 0,
                 cutout: '75%'
@@ -572,6 +544,8 @@ function initGaugeChart(canvasId, color) {
         }
     }
 }
+
+
 // Función para actualizar las estadísticas de conversaciones
 function updateConversationStats(received, attended) {
     const statBoxes = document.querySelectorAll('.stat-box');
@@ -592,6 +566,7 @@ function updateConversationStats(received, attended) {
     });
 }
 
+
 // Función para actualizar el valor del gauge
 function updateGaugeValue(canvasId, value) {
     const canvas = document.getElementById(canvasId);
@@ -607,7 +582,7 @@ function updateGaugeValue(canvasId, value) {
     }
 }
 
-// Función para modificar las métricas de tiempo
+// Función para actualizar las métricas de tiempo
 function updateTimeMetric(metricId, value) {
     const element = document.getElementById(metricId);
     if (!element) return;
@@ -622,6 +597,7 @@ function updateTimeMetric(metricId, value) {
         valueElement.textContent = `${displayValue} minutos`;
     }
 }
+
 
 // Función para actualizar métricas de rendimiento en el dashboard principal
 function updatePerformanceTable(goalsAchieved, totalGoals, abandonedConversations, totalConversations, abandonmentRate) {

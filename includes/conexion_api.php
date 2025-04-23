@@ -1,14 +1,24 @@
 <?php
-
+/**
+ * permite que tu aplicación frontend se comunique con el servidor de la API, manejando toda la complejidad de autenticación, 
+ * procesamiento de respuestas y gestión de errores.
+ */
 require_once(__DIR__ . '/../config/config.php');
 require_once(__DIR__ . '/../includes/get_metrics.php');
 
+
+/**
+ * 1. Procesa solicitudes AJAX entrantes identificadas por el parámetro 'action'.
+ * Para la acción 'hourly_stats', detecta la fecha desde múltiples fuentes posibles.
+ * Obtiene y procesa estadísticas de chat por hora mediante funciones especializadas.
+ * Devuelve datos formateados en JSON para alimentar los gráficos del dashboard.
+ */
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
 
     switch ($_GET['action']) {
         case 'hourly_stats':
-            // Obtener fecha del parámetro GET explícitamente
+            // Obtener fecha del parámetro GET 
             $fecha = isset($_GET['fecha']) ? $_GET['fecha'] : date('Y-m-d');
             
             // Registrar la fecha recibida para depuración
@@ -33,7 +43,7 @@ if (isset($_GET['action'])) {
             error_log("hourly_stats: Fecha final utilizada: " . $fecha);
             
             try {
-                // IMPORTANTE: Pasar la misma fecha como start_date y end_date, y 'hour' como group_by
+                // Pasar la misma fecha como start_date y end_date, y 'hour' como group_by
                 $datos = obtener_estadisticas_chat($fecha, $fecha, 'hour');
                 
                 // Registrar los datos recibidos para depuración
@@ -81,6 +91,7 @@ if (isset($_GET['action'])) {
     exit;
 }
 
+//2. Obtiene métricas generales del servidor
 function getMetricsFromAPI() {
     global $config;
     
@@ -137,6 +148,7 @@ function getMetricsFromAPI() {
     return $data;
 }
 
+//3. Gestiona la autenticación con la API
 function login_api($username, $password) {
     global $config;
     // Inicializar cURL

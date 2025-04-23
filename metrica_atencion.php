@@ -1,9 +1,6 @@
 <?php
 session_start();
 
-// Añadir al inicio de metrica_atencion.php, metrica_oportunidad.php y metrica_abandono.php
-// Justo después de session_start()
-
 // Si hay filtros específicos (inicio/fin), dar prioridad a estos
 if (isset($_GET['inicio']) || isset($_GET['fin'])) {
     $inicio = isset($_GET['inicio']) ? $_GET['inicio'] : date('Y-m-01');

@@ -63,6 +63,5 @@ try {
     ]);
 }
 
-// Asegurar que no haya nada más después de este punto
 exit;
 ?>

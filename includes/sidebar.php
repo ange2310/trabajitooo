@@ -51,7 +51,7 @@
             <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'profile.php' ? 'active' : ''; ?>">
                 <a href="profile.php">
                     <i class="fas fa-user"></i>
-                    <span>Profile</span>
+                    <span>Perfil</span>
                 </a>
             </li>
         </ul>
@@ -61,7 +61,7 @@
     <div class="sidebar-footer">
         <a href="logout.php" class="logout-btn">
             <i class="fas fa-sign-out-alt"></i>
-            <span>Logout</span>
+            <span>Cerrar Sesión</span>
         </a>
     </div>
 </div>
