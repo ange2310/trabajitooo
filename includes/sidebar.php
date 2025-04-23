@@ -17,7 +17,7 @@
             <li class="<?php echo basename($_SERVER['PHP_SELF']) == 'tables.php' ? 'active' : ''; ?>">
                 <a href="tables.php<?php echo isset($_SESSION['dashboard_fecha']) ? '?fecha='.htmlspecialchars($_SESSION['dashboard_fecha']) : ''; ?>">
                     <i class="fas fa-table"></i>
-                    <span>Tables</span>
+                    <span>Tablas de Agentes</span>
                 </a>
             </li>
             <!-- Nuevos iconos para gauges -->
